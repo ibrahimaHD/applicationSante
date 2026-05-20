@@ -9,14 +9,14 @@ class UserModel {
   final String? avatar;
   final bool isActive;
   final DateTime? createdAt;
-
+ 
   // Champs spécifiques aux rôles
-  final String? specialite;       // Médecin
-  final String? numerolicence;    // Médecin / Pharmacien
-  final String? nomPharmacie;     // Pharmacien
-  final String? vehicleType;      // Livreur
-  final String? zone;             // Livreur
-
+  final String? specialite;    // Médecin
+  final String? numerolicence; // Médecin / Pharmacien
+  final String? nomPharmacie;  // Pharmacien
+  final String? vehicleType;   // Livreur
+  final String? zone;          // Livreur
+ 
   UserModel({
     this.id,
     required this.nom,
@@ -34,7 +34,7 @@ class UserModel {
     this.vehicleType,
     this.zone,
   });
-
+ 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'],
@@ -44,19 +44,19 @@ class UserModel {
       telephone: json['telephone'] ?? '',
       role: json['role'] ?? 'patient',
       token: json['token'],
-      avatar: json['avatar'],
-      isActive: json['is_active'] ?? true,
+      avatar: json['photo_profil'] ?? json['avatar'],
+      isActive: json['est_actif'] ?? json['is_active'] ?? true,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
       specialite: json['specialite'],
-      numerolicence: json['numero_licence'],
+      numerolicence: json['numero_ordre'] ?? json['numero_licence'],
       nomPharmacie: json['nom_pharmacie'],
-      vehicleType: json['vehicle_type'],
-      zone: json['zone'],
+      vehicleType: json['vehicule'] ?? json['vehicle_type'],
+      zone: json['zone_livraison'] ?? json['zone'],
     );
   }
-
+ 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -75,18 +75,17 @@ class UserModel {
       'zone': zone,
     };
   }
-
+ 
   String get fullName => '$prenom $nom';
-
-  bool get isAdmin =>
-      role == 'admin_jds' || role == 'super_admin';
-
-  bool get isMedecin => role == 'medecin';
-  bool get isPatient => role == 'patient';
+ 
+  // ✅ Synchronisé avec les rôles du backend
+  bool get isAdmin      => role == 'admin' || role == 'superadmin';
+  bool get isMedecin    => role == 'medecin';
+  bool get isPatient    => role == 'patient';
   bool get isPharmacien => role == 'pharmacien';
-  bool get isLivreur => role == 'livreur';
-  bool get isSuperAdmin => role == 'super_admin';
-
+  bool get isLivreur    => role == 'livreur';
+  bool get isSuperAdmin => role == 'superadmin';
+ 
   UserModel copyWith({
     int? id,
     String? nom,
@@ -108,6 +107,12 @@ class UserModel {
       token: token ?? this.token,
       avatar: avatar ?? this.avatar,
       isActive: isActive ?? this.isActive,
+      specialite: specialite,
+      numerolicence: numerolicence,
+      nomPharmacie: nomPharmacie,
+      vehicleType: vehicleType,
+      zone: zone,
     );
   }
 }
+ 
