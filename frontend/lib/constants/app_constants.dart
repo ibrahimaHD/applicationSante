@@ -14,6 +14,7 @@ class AppColors {
   static const Color divider = Color(0xFFE0E0E0);
   static const Color inputFill = Color(0xFFF0F4FF);
 }
+
  
 class AppTextStyles {
   static const TextStyle heading1 = TextStyle(
@@ -55,7 +56,7 @@ class AppConstants {
   // Chrome / Edge (web)  → http://localhost:3000/api
   // Émulateur Android    → http://10.0.2.2:3000/api
   // Téléphone réel       → http://192.168.X.X:3000/api
-  static const String baseUrl = 'http://localhost:3000/api';
+  static const String baseUrl = 'http://127.0.0.1:3000/api';
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
   static const String roleKey = 'user_role';
@@ -115,4 +116,5 @@ class UserRole {
     }
   }
 }
+
  

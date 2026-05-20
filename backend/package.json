@@ -1,5 +1,5 @@
 {
-  "name": "health-backend",
+  "name": "backend",
   "version": "1.0.0",
   "description": "Backend API pour application de santé",
   "main": "server.js",
@@ -12,9 +12,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
+    "http-proxy-middleware": "^4.0.0",
     "jsonwebtoken": "^9.0.0",
     "mysql2": "^3.3.3",
-    "nodemailer": "^6.9.3"
+    "nodemailer": "^8.0.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
