@@ -97,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'HealthCare',
+                    'LaafiBa',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 34,
