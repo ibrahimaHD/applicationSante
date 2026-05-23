@@ -1,5 +1,15 @@
 // controllers/patientController.js
 const db = require('../config/database');
+// Ajoute cette fonction en haut du fichier après const db = require(...)
+const convertirDate = (date) => {
+  if (!date) return null;
+  // Si format JJ/MM/AAAA → convertir en AAAA-MM-JJ
+  if (date.includes('/')) {
+    const [jour, mois, annee] = date.split('/');
+    return `${annee}-${mois}-${jour}`;
+  }
+  return date;
+};
 
 // ─────────────────────────────────────────
 // PROFIL MÉDICAL
@@ -9,7 +19,7 @@ const getProfilMedical = async (req, res) => {
   try {
     const patientId = req.utilisateur.id;
     const [rows] = await db.query(
-      'SELECT * FROM profils_medicaux WHERE patient_id = ?',
+      'SELECT * FROM profils_medicaux WHERE utilisateur_id = ?',
       [patientId]
     );
     res.json({ succes: true, profil: rows[0] || null });
@@ -28,7 +38,7 @@ const sauvegarderProfilMedical = async (req, res) => {
     } = req.body;
 
     const [existant] = await db.query(
-      'SELECT id FROM profils_medicaux WHERE patient_id = ?',
+      'SELECT id FROM profils_medicaux WHERE utilisateur_id = ?',
       [patientId]
     );
 
@@ -36,13 +46,13 @@ const sauvegarderProfilMedical = async (req, res) => {
       await db.query(
         `UPDATE profils_medicaux SET groupe_sanguin=?, sexe=?, date_naissance=?,
          taille=?, poids=?, allergies=?, antecedents=?, medicaments_actuels=?,
-         medecin_traitant=?, numero_assurance=? WHERE patient_id=?`,
+         medecin_traitant=?, numero_assurance=? WHERE utisateur_id=?`,
         [groupe_sanguin, sexe, date_naissance, taille, poids,
          allergies, antecedents, medicaments_actuels, medecin_traitant, numero_assurance, patientId]
       );
     } else {
       await db.query(
-        `INSERT INTO profils_medicaux (patient_id, groupe_sanguin, sexe, date_naissance,
+        `INSERT INTO profils_medicaux (utilisateur_id, groupe_sanguin, sexe, date_naissance,
          taille, poids, allergies, antecedents, medicaments_actuels, medecin_traitant, numero_assurance)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [patientId, groupe_sanguin, sexe, date_naissance, taille, poids,
@@ -422,3 +432,12 @@ module.exports = {
   getDossierMedical, getExamens, ajouterExamen,
   getOrdonnances,
 };
+// Ajoute cette fonction en haut du fichier après const db = require(...)
+
+
+
+
+
+
+
+
