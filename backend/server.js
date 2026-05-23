@@ -34,6 +34,8 @@ app.get('/', (req, res) => {
 app.use((req, res) => {
   res.status(404).json({ succes: false, message: 'Route introuvable.' });
 });
+app.use('/api/patient', require('./routes/patient'));
+
  
 // Démarrer sur 2 ports : 3000 et 3001
 const PORT1 = 3000;
@@ -47,4 +49,3 @@ app.listen(PORT1, '0.0.0.0', () => {
 app.listen(PORT2, '0.0.0.0', () => {
   console.log(`🚀 Aussi disponible sur http://localhost:${PORT2}\n`);
 });
- 
