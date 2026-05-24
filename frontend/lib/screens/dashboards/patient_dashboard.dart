@@ -11,25 +11,25 @@ import '../patient/suivi_grossesse_screen.dart';
 import '../patient/vaccinations_enfants_screen.dart';
 import '../patient/dossier_medical_screen.dart';
 import '../patient/informations_personnelles_screen.dart';
- 
+import '../patient/rendez_vous_screen.dart';
 class PatientDashboard extends StatefulWidget {
   final UserModel user;
   const PatientDashboard({super.key, required this.user});
- 
+
   @override
   State<PatientDashboard> createState() => _PatientDashboardState();
 }
- 
+
 class _PatientDashboardState extends State<PatientDashboard> {
   final _service = PatientService();
   UserModel? _userMaj;
- 
+
   @override
   void initState() {
     super.initState();
     _chargerInfos();
   }
- 
+
   Future<void> _chargerInfos() async {
     final result = await _service.getInfosPersonnelles();
     if (result['succes'] == true && mounted) {
@@ -43,9 +43,9 @@ class _PatientDashboardState extends State<PatientDashboard> {
       });
     }
   }
- 
+
   UserModel get _user => _userMaj ?? widget.user;
- 
+
   @override
   Widget build(BuildContext context) {
     return BaseDashboard(
@@ -86,13 +86,13 @@ class _PatientDashboardState extends State<PatientDashboard> {
             ],
           ),
         ),
- 
+
         const SizedBox(height: 24),
- 
+
         // ── Section Profil & Infos ─────────────────────────────────────
         const Text('Mon Profil', style: AppTextStyles.heading2),
         const SizedBox(height: 12),
- 
+
         QuickActionCard(
           title: 'Informations personnelles',
           subtitle: 'Gérer mes données personnelles',
@@ -114,23 +114,36 @@ class _PatientDashboardState extends State<PatientDashboard> {
           subtitle: 'Créer et modifier mon profil médical',
           icon: Icons.medical_information_outlined,
           color: const Color(0xFF00897B),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => ProfilMedicalScreen(user: _user))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ProfilMedicalScreen(user: _user))),
         ),
- 
+
         const SizedBox(height: 24),
- 
+
         // ── Section Santé ──────────────────────────────────────────────
         const Text('Ma Santé', style: AppTextStyles.heading2),
         const SizedBox(height: 12),
- 
+
+        QuickActionCard(
+          title: 'Mes rendez-vous',
+          subtitle: 'Prendre et gérer mes RDV',
+          icon: Icons.calendar_today_outlined,
+          color: const Color(0xFF00897B),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => RendezVousScreen(user: _user))),
+        ),
+
         QuickActionCard(
           title: 'Mon dossier médical',
           subtitle: 'Consulter et exporter mon dossier',
           icon: Icons.folder_outlined,
           color: const Color(0xFF00897B),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => DossierMedicalScreen(user: _user))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => DossierMedicalScreen(user: _user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(
@@ -138,8 +151,10 @@ class _PatientDashboardState extends State<PatientDashboard> {
           subtitle: 'Historique de mes consultations',
           icon: Icons.book_outlined,
           color: const Color(0xFF1E88E5),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => CarnetSanteScreen(user: _user))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => CarnetSanteScreen(user: _user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(
@@ -147,16 +162,18 @@ class _PatientDashboardState extends State<PatientDashboard> {
           subtitle: 'Historique et calendrier vaccinal',
           icon: Icons.vaccines_outlined,
           color: const Color(0xFF8E24AA),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => VaccinationsScreen(user: _user))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => VaccinationsScreen(user: _user))),
         ),
- 
+
         const SizedBox(height: 24),
- 
+
         // ── Section Rappels & Suivi ────────────────────────────────────
         const Text('Suivi & Rappels', style: AppTextStyles.heading2),
         const SizedBox(height: 12),
- 
+
         QuickActionCard(
           title: 'Mes rappels',
           subtitle: 'Vaccins, traitements, rendez-vous',
@@ -171,8 +188,10 @@ class _PatientDashboardState extends State<PatientDashboard> {
           subtitle: 'Suivre ma grossesse semaine par semaine',
           icon: Icons.pregnant_woman_outlined,
           color: const Color(0xFFE91E8C),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => SuiviGrossesseScreen(user: _user))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => SuiviGrossesseScreen(user: _user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(
@@ -180,23 +199,28 @@ class _PatientDashboardState extends State<PatientDashboard> {
           subtitle: 'Carnet vaccinal de mes enfants',
           icon: Icons.child_care_outlined,
           color: const Color(0xFF00ACC1),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => VaccinationsEnfantsScreen(user: _user))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => VaccinationsEnfantsScreen(user: _user))),
         ),
- 
+
         const SizedBox(height: 24),
- 
+
         // ── Section Données ────────────────────────────────────────────
         const Text('Mes Données', style: AppTextStyles.heading2),
         const SizedBox(height: 12),
- 
+
         QuickActionCard(
           title: 'Accès hors ligne',
           subtitle: 'Dossier médical disponible sans internet',
           icon: Icons.offline_bolt_outlined,
           color: const Color(0xFF3949AB),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => DossierMedicalScreen(user: _user, horsLigne: true))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      DossierMedicalScreen(user: _user, horsLigne: true))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(
@@ -204,13 +228,15 @@ class _PatientDashboardState extends State<PatientDashboard> {
           subtitle: 'Télécharger mon dossier médical',
           icon: Icons.picture_as_pdf_outlined,
           color: const Color(0xFFC62828),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => DossierMedicalScreen(user: _user, exportPdf: true))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      DossierMedicalScreen(user: _user, exportPdf: true))),
         ),
- 
+
         const SizedBox(height: 32),
       ],
     );
   }
 }
- 
