@@ -12,6 +12,8 @@ import '../patient/vaccinations_enfants_screen.dart';
 import '../patient/dossier_medical_screen.dart';
 import '../patient/informations_personnelles_screen.dart';
 import '../patient/rendez_vous_screen.dart';
+import '../patient/resultats_medicaux_screen.dart';
+import '../patient/audit_acces_screen.dart'; 
 class PatientDashboard extends StatefulWidget {
   final UserModel user;
   const PatientDashboard({super.key, required this.user});
@@ -144,6 +146,24 @@ class _PatientDashboardState extends State<PatientDashboard> {
               context,
               MaterialPageRoute(
                   builder: (_) => DossierMedicalScreen(user: _user))),
+        ),
+        QuickActionCard(
+          title: 'Résultats médicaux',
+          subtitle: 'Analyses et imageries',
+          icon: Icons.science_outlined,
+          color: const Color(0xFF3949AB),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ResultatsMedicauxScreen(user: _user))),
+        ),
+        QuickActionCard(
+          title: 'Audit des accès',
+          subtitle: 'Qui a consulté mon dossier',
+          icon: Icons.visibility_outlined,
+          color: const Color(0xFF37474F),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => AuditAccesScreen(user: _user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(

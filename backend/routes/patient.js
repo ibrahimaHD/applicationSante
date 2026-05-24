@@ -12,7 +12,7 @@ const {
   getDossierMedical, getExamens, ajouterExamen, getOrdonnances,
 } = require('../controllers/patientController');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
-
+const { getResultats, ajouterResultat, supprimerResultat, getAudits } = require('../controllers/resultatsController');
  
 // Tous les endpoints nécessitent d'être connecté
 router.use(verifierToken);
@@ -62,5 +62,10 @@ router.get('/ordonnances', getOrdonnances);
 router.get('/infos-personnelles', getInfosPersonnelles);
 router.put('/infos-personnelles', majInfosPersonnelles);
  
+
+router.get('/resultats', getResultats);
+router.post('/resultats', ajouterResultat);
+router.delete('/resultats/:id', supprimerResultat);
+router.get('/audits', getAudits);
 module.exports = router;
  
