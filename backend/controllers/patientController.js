@@ -401,8 +401,41 @@ const getOrdonnances = async (req, res) => {
   res.json({ succes: true, ordonnances: [] });
 };
  
+const getInfosPersonnelles = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT u.nom, u.prenom, u.email, u.telephone,
+              p.adresse, p.date_naissance, p.sexe, p.groupe_sanguin
+       FROM utilisateurs u
+       LEFT JOIN patients p ON u.id = p.utilisateur_id
+       WHERE u.id = ?`,
+      [req.utilisateur.id]
+    );
+    res.json({ succes: true, infos: rows[0] });
+  } catch (error) {
+    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+  }
+};
+
+const majInfosPersonnelles = async (req, res) => {
+  try {
+    const { nom, prenom, telephone, adresse } = req.body;
+    await db.query(
+      'UPDATE utilisateurs SET nom=?, prenom=?, telephone=? WHERE id=?',
+      [nom, prenom, telephone, req.utilisateur.id]
+    );
+    await db.query(
+      'UPDATE patients SET adresse=? WHERE utilisateur_id=?',
+      [adresse, req.utilisateur.id]
+    );
+    res.json({ succes: true, message: 'Informations mises à jour !' });
+  } catch (error) {
+    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+  }
+};
 module.exports = {
   getProfilMedical, sauvegarderProfilMedical,
+  getInfosPersonnelles, majInfosPersonnelles,
   getConsultations, ajouterConsultation, supprimerConsultation,
   getVaccinations, ajouterVaccination, mettreAJourVaccination,
   getRappels, ajouterRappel, toggleRappel, supprimerRappel,

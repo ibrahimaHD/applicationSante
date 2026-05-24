@@ -37,4 +37,3 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Serveur démarré sur http://localhost:${PORT}`);
   console.log(`✅ Routes: /api/auth | /api/dashboard | /api/admin | /api/patient\n`);
 });
- 

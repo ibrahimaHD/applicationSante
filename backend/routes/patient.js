@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const {
   getProfilMedical, sauvegarderProfilMedical,
+  getInfosPersonnelles, majInfosPersonnelles, 
   getConsultations, ajouterConsultation, supprimerConsultation,
   getVaccinations, ajouterVaccination, mettreAJourVaccination,
   getRappels, ajouterRappel, toggleRappel, supprimerRappel,
@@ -11,6 +12,7 @@ const {
   getDossierMedical, getExamens, ajouterExamen, getOrdonnances,
 } = require('../controllers/patientController');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
+
  
 // Tous les endpoints nécessitent d'être connecté
 router.use(verifierToken);
@@ -55,6 +57,10 @@ router.post('/examens', ajouterExamen);
  
 // Ordonnances
 router.get('/ordonnances', getOrdonnances);
+
+// Informations personnelles
+router.get('/infos-personnelles', getInfosPersonnelles);
+router.put('/infos-personnelles', majInfosPersonnelles);
  
 module.exports = router;
  

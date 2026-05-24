@@ -31,10 +31,10 @@ class _InformationsPersonnellesScreenState
   @override
   void initState() {
     super.initState();
-    _nomController = TextEditingController(text: widget.user.nom);
-    _prenomController = TextEditingController(text: widget.user.prenom);
-    _emailController = TextEditingController(text: widget.user.email);
-    _phoneController = TextEditingController(text: widget.user.telephone);
+    _nomController = TextEditingController();
+    _prenomController = TextEditingController();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
     _adresseController = TextEditingController();
     _charger();
   }
@@ -56,25 +56,30 @@ class _InformationsPersonnellesScreenState
   }
 
   Future<void> _sauvegarder() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
+  if (!_formKey.currentState!.validate()) return;
+  setState(() => _isSaving = true);
 
-    final result = await _service.majInfosPersonnelles({
-      'nom': _nomController.text.trim(),
-      'prenom': _prenomController.text.trim(),
-      'telephone': _phoneController.text.trim(),
-      'adresse': _adresseController.text.trim(),
-    });
+  final result = await _service.majInfosPersonnelles({
+    'nom': _nomController.text.trim(),
+    'prenom': _prenomController.text.trim(),
+    'telephone': _phoneController.text.trim(),
+    'adresse': _adresseController.text.trim(),
+  });
 
-    setState(() { _isSaving = false; _isEditing = false; });
+  setState(() { _isSaving = false; _isEditing = false; });
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result['message'] ?? ''),
-        backgroundColor: result['succes'] == true ? AppColors.success : AppColors.error,
-      ));
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(result['message'] ?? ''),
+      backgroundColor: result['succes'] == true ? AppColors.success : AppColors.error,
+    ));
+
+    if (result['succes'] == true) {
+      // Retourner true pour signaler au dashboard de se rafraîchir
+      Navigator.pop(context, true);
     }
   }
+}
 
   @override
   void dispose() {
