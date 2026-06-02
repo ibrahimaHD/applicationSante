@@ -14,6 +14,7 @@ import '../patient/informations_personnelles_screen.dart';
 import '../patient/rendez_vous_screen.dart';
 import '../patient/resultats_medicaux_screen.dart';
 import '../patient/audit_acces_screen.dart'; 
+import '../patient/cartographie_screen.dart';
 class PatientDashboard extends StatefulWidget {
   final UserModel user;
   const PatientDashboard({super.key, required this.user});

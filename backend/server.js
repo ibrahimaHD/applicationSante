@@ -33,6 +33,8 @@ app.use((req, res) => {
 });
 
 app.use('/api/rendez-vous', require('./routes/rendezVous'));
+
+app.use('/api/cartographie', require('./routes/cartographie_routes'));
  
 const PORT = 3000;
 app.listen(PORT, '0.0.0.0', () => {

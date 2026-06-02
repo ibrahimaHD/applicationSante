@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'constants/app_constants.dart';
 import 'screens/splash_screen.dart';
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
