@@ -11,7 +11,7 @@ router.use(verifierToken);
 
 // Patient
 router.get('/', autoriserRoles('patient', 'admin', 'superadmin'), getMesRendezVous);
-router.get('/medecins', autoriserRoles('patient', 'admin', 'superadmin'), getMedecinsDisponibles);
+router.get('/medecin', autoriserRoles('patient', 'admin', 'superadmin'), getMedecinsDisponibles);
 router.post('/', autoriserRoles('patient'), demanderRendezVous);
 router.patch('/:id/annuler', autoriserRoles('patient'), annulerRendezVous);
 

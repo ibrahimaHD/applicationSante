@@ -48,34 +48,49 @@ class _RendezVousScreenState extends State<RendezVousScreen>
   }
 
   Future<void> _charger() async {
-    setState(() => _isLoading = true);
-    try {
-      final headers = await _headers();
+  setState(() => _isLoading = true);
+  try {
+    final headers = await _headers();
 
-      final rdvResponse = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/rendez-vous'),
-        headers: headers,
-      );
+    final results = await Future.wait([
+      http.get(Uri.parse('${AppConstants.baseUrl}/rendez-vous'), headers: headers),
+      http.get(Uri.parse('${AppConstants.baseUrl}/rendez-vous/medecins'), headers: headers),
+    ]);
 
-      final medecinResponse = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/rendez-vous/medecins'),
-        headers: headers,
-      );
+    final rdvResponse     = results[0];
+    final medecinResponse = results[1];
 
-      if (rdvResponse.statusCode == 200) {
-        final data = jsonDecode(rdvResponse.body);
-        setState(() => _rendezVous = data['rendez_vous'] ?? []);
-      }
+    debugPrint('RDV status: ${rdvResponse.statusCode}');
+    debugPrint('Médecins status: ${medecinResponse.statusCode} | body: ${medecinResponse.body}');
 
-      if (medecinResponse.statusCode == 200) {
-        final data = jsonDecode(medecinResponse.body);
-        setState(() => _medecins = data['medecins'] ?? []);
-      }
-    } catch (e) {
-      debugPrint('Erreur: $e');
+    if (rdvResponse.statusCode == 200) {
+      final data = jsonDecode(rdvResponse.body);
+      setState(() => _rendezVous = data['rendez_vous'] ?? []);
     }
-    setState(() => _isLoading = false);
+
+    if (medecinResponse.statusCode == 200) {
+      final data = jsonDecode(medecinResponse.body);
+      setState(() => _medecins = data['medecins'] ?? []);
+    } else {
+      // Affiche le vrai message d'erreur de l'API
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Impossible de charger les médecins (${medecinResponse.statusCode})'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    }
+  } catch (e) {
+    debugPrint('Erreur _charger: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Erreur réseau. Vérifiez votre connexion.'),
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
+  setState(() => _isLoading = false);
+}
 
   Future<void> _demanderRdv() async {
     int? medecinId;

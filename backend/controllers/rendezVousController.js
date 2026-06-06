@@ -28,7 +28,7 @@ const getMedecinsDisponibles = async (req, res) => {
       `SELECT u.id, u.nom, u.prenom, m.specialite, m.hopital_clinique
        FROM utilisateurs u
        JOIN medecins m ON u.id = m.utilisateur_id
-       WHERE u.est_actif = TRUE AND m.disponible = TRUE
+       WHERE u.est_actif = TRUE
        ORDER BY u.nom ASC`
     );
     res.json({ succes: true, medecins: rows });

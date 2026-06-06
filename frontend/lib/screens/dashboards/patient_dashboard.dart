@@ -13,8 +13,10 @@ import '../patient/dossier_medical_screen.dart';
 import '../patient/informations_personnelles_screen.dart';
 import '../patient/rendez_vous_screen.dart';
 import '../patient/resultats_medicaux_screen.dart';
-import '../patient/audit_acces_screen.dart'; 
+import '../patient/audit_acces_screen.dart';
 import '../patient/cartographie_screen.dart';
+import '../patient/pharmacie_screen.dart';
+
 class PatientDashboard extends StatefulWidget {
   final UserModel user;
   const PatientDashboard({super.key, required this.user});
@@ -137,7 +139,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => RendezVousScreen(user: _user))),
         ),
-
+        const SizedBox(height: 10),
         QuickActionCard(
           title: 'Mon dossier médical',
           subtitle: 'Consulter et exporter mon dossier',
@@ -148,6 +150,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
               MaterialPageRoute(
                   builder: (_) => DossierMedicalScreen(user: _user))),
         ),
+        const SizedBox(height: 10),
         QuickActionCard(
           title: 'Résultats médicaux',
           subtitle: 'Analyses et imageries',
@@ -158,6 +161,18 @@ class _PatientDashboardState extends State<PatientDashboard> {
               MaterialPageRoute(
                   builder: (_) => ResultatsMedicauxScreen(user: _user))),
         ),
+        const SizedBox(height: 10),
+        QuickActionCard(
+          title: 'Formations sanitaires',
+          subtitle: 'Hôpitaux, CSPS, pharmacies à Bobo',
+          icon: Icons.map_outlined,
+          color: const Color(0xFF1E88E5),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => CartographieScreen(user: _user))),
+        ),
+        const SizedBox(height: 10),
         QuickActionCard(
           title: 'Audit des accès',
           subtitle: 'Qui a consulté mon dossier',
@@ -232,6 +247,15 @@ class _PatientDashboardState extends State<PatientDashboard> {
         const Text('Mes Données', style: AppTextStyles.heading2),
         const SizedBox(height: 12),
 
+        QuickActionCard(
+          title: 'Pharmacie en ligne',
+          subtitle: 'Commander vos médicaments',
+          icon: Icons.medication_outlined,
+          color: const Color(0xFF8E24AA),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => PharmacieScreen(user: _user))),
+        ),
+        const SizedBox(height: 10),
         QuickActionCard(
           title: 'Accès hors ligne',
           subtitle: 'Dossier médical disponible sans internet',

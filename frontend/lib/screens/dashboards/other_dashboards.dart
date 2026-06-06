@@ -75,6 +75,13 @@ class LivreurDashboard extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         QuickActionCard(
+          title: 'Mon profil',
+          subtitle: 'Disponibilité & gains',
+          icon: Icons.account_circle_outlined,
+          color: const Color(0xFF8E24AA),
+        ),
+        const SizedBox(height: 10),
+        QuickActionCard(
           title: 'Carte & itinéraire',
           subtitle: 'Navigation GPS',
           icon: Icons.map_outlined,
@@ -86,13 +93,6 @@ class LivreurDashboard extends StatelessWidget {
           subtitle: 'Livraisons effectuées',
           icon: Icons.history_outlined,
           color: const Color(0xFF00897B),
-        ),
-        const SizedBox(height: 10),
-        QuickActionCard(
-          title: 'Mon profil',
-          subtitle: 'Disponibilité & gains',
-          icon: Icons.account_circle_outlined,
-          color: const Color(0xFF8E24AA),
         ),
       ],
     );
