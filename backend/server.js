@@ -33,7 +33,7 @@ app.use('/api/cartographie', require('./routes/cartographie_routes'));
 app.use('/api/pharmacie', require('./routes/pharmacie_routes'));
 
 
-app.use('/api/medecins', require('./routes/medecin'));
+app.use('/api/medecin', require('./routes/medecin'));
 
 
  

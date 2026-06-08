@@ -92,134 +92,206 @@ class _RendezVousScreenState extends State<RendezVousScreen>
   setState(() => _isLoading = false);
 }
 
-  Future<void> _demanderRdv() async {
-    int? medecinId;
-    final dateController = TextEditingController();
-    final heureController = TextEditingController();
-    final motifController = TextEditingController();
+Future<void> _demanderRdv() async {
+  // ✅ Variables locales réinitialisées à chaque ouverture du modal
+  int? medecinId;
+  final dateController = TextEditingController();
+  final heureController = TextEditingController();
+  final motifController = TextEditingController();
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setStateModal) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => StatefulBuilder(
+      builder: (context, setStateModal) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2)),
             ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
-              const Text('Demander un rendez-vous', style: AppTextStyles.heading2),
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
+            const Text('Demander un rendez-vous',
+                style: AppTextStyles.heading2),
+            const SizedBox(height: 16),
 
-              // Sélection médecin
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Médecin', style: AppTextStyles.label),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<int>(
-                  value: medecinId,
-                  onChanged: (v) => setStateModal(() => medecinId = v),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.inputFill,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    prefixIcon: const Icon(Icons.person_outlined, color: AppColors.primary, size: 20),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            // Sélection médecin
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Médecin *', style: AppTextStyles.label),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<int>(
+                value: medecinId,
+                onChanged: (v) => setStateModal(() => medecinId = v),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppColors.inputFill,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
-                  hint: const Text('Choisir un médecin'),
-                  items: _medecins.map((m) => DropdownMenuItem<int>(
-                    value: m['id'],
-                    child: Text('Dr. ${m['prenom']} ${m['nom']} - ${m['specialite'] ?? 'Généraliste'}'),
-                  )).toList(),
+                  prefixIcon: const Icon(Icons.person_outlined,
+                      color: AppColors.primary, size: 20),
+                  hintText: 'Choisir un médecin',
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
                 ),
-              ]),
+                // ✅ Afficher spécialité pour mieux identifier
+                items: _medecins.map((m) => DropdownMenuItem<int>(
+                  value: m['id'] is int
+                      ? m['id']
+                      : int.parse(m['id'].toString()),
+                  child: Text(
+                    'Dr. ${m['prenom']} ${m['nom']}'
+                    '${m['specialite'] != null ? ' — ${m['specialite']}' : ''}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                )).toList(),
+              ),
+            ]),
 
-              const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-              Row(children: [
-                Expanded(child: AppTextField(
+            Row(children: [
+              Expanded(
+                child: AppTextField(
                   label: 'Date *',
                   hint: 'JJ/MM/AAAA',
                   prefixIcon: Icons.calendar_today_outlined,
                   controller: dateController,
-                )),
-                const SizedBox(width: 12),
-                Expanded(child: AppTextField(
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppTextField(
                   label: 'Heure *',
                   hint: 'HH:MM',
                   prefixIcon: Icons.access_time,
                   controller: heureController,
-                )),
-              ]),
-
-              const SizedBox(height: 12),
-
-              AppTextField(
-                label: 'Motif *',
-                hint: 'Raison de la consultation',
-                prefixIcon: Icons.medical_services_outlined,
-                controller: motifController,
-                maxLines: 2,
+                ),
               ),
-
-              const SizedBox(height: 20),
-
-              AppButton(
-                text: 'Envoyer la demande',
-                icon: Icons.send_outlined,
-                color: const Color(0xFF00897B),
-                onPressed: () async {
-                  if (medecinId == null || dateController.text.isEmpty ||
-                      heureController.text.isEmpty || motifController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Remplissez tous les champs obligatoires'),
-                          backgroundColor: AppColors.error));
-                    return;
-                  }
-                  Navigator.pop(context);
-
-                  final headers = await _headers();
-                  final date = dateController.text;
-                  final dateParts = date.split('/');
-                  final dateFormatee = dateParts.length == 3
-                      ? '${dateParts[2]}-${dateParts[1]}-${dateParts[0]}'
-                      : date;
-
-                  final response = await http.post(
-                    Uri.parse('${AppConstants.baseUrl}/rendez-vous'),
-                    headers: headers,
-                    body: jsonEncode({
-                      'medecin_id': medecinId,
-                      'date_rdv': dateFormatee,
-                      'heure_rdv': heureController.text,
-                      'motif': motifController.text,
-                    }),
-                  );
-
-                  final data = jsonDecode(response.body);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(data['message'] ?? ''),
-                      backgroundColor: data['succes'] == true ? AppColors.success : AppColors.error,
-                    ));
-                    if (data['succes'] == true) _charger();
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
             ]),
-          ),
+
+            const SizedBox(height: 12),
+
+            AppTextField(
+              label: 'Motif *',
+              hint: 'Raison de la consultation',
+              prefixIcon: Icons.medical_services_outlined,
+              controller: motifController,
+              maxLines: 2,
+            ),
+
+            const SizedBox(height: 20),
+
+            AppButton(
+              text: 'Envoyer la demande',
+              icon: Icons.send_outlined,
+              color: const Color(0xFF00897B),
+              onPressed: () async {
+                // ✅ Validation complète avant envoi
+                if (medecinId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Veuillez sélectionner un médecin'),
+                    backgroundColor: AppColors.error,
+                  ));
+                  return;
+                }
+                if (dateController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Veuillez entrer une date'),
+                    backgroundColor: AppColors.error,
+                  ));
+                  return;
+                }
+                if (heureController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Veuillez entrer une heure'),
+                    backgroundColor: AppColors.error,
+                  ));
+                  return;
+                }
+                if (motifController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Veuillez entrer le motif'),
+                    backgroundColor: AppColors.error,
+                  ));
+                  return;
+                }
+
+                Navigator.pop(context);
+
+                final headers = await _headers();
+
+                // ✅ Conversion date JJ/MM/AAAA → AAAA-MM-JJ
+                final dateStr = dateController.text.trim();
+                String dateFormatee = dateStr;
+                if (dateStr.contains('/')) {
+                  final parts = dateStr.split('/');
+                  if (parts.length == 3) {
+                    dateFormatee =
+                        '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+                  }
+                }
+
+                // ✅ Conversion heure HH:MM
+                String heureFormatee = heureController.text.trim();
+                if (!heureFormatee.contains(':')) {
+                  heureFormatee = '$heureFormatee:00';
+                }
+
+                final bodyData = {
+                  'medecin_id': medecinId,
+                  'date_rdv': dateFormatee,
+                  'heure_rdv': heureFormatee,
+                  'motif': motifController.text.trim(),
+                };
+
+                debugPrint('Envoi RDV: ${jsonEncode(bodyData)}');
+
+                final response = await http.post(
+                  Uri.parse('${AppConstants.baseUrl}/rendez-vous'),
+                  headers: headers,
+                  body: jsonEncode(bodyData),
+                );
+
+                debugPrint('Réponse: ${response.statusCode} - ${response.body}');
+
+                final data = jsonDecode(response.body);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(data['message'] ?? ''),
+                    backgroundColor: data['succes'] == true
+                        ? AppColors.success
+                        : AppColors.error,
+                    duration: const Duration(seconds: 4),
+                  ));
+                  // ✅ Rafraîchir la liste après succès
+                  if (data['succes'] == true) _charger();
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+          ]),
         ),
       ),
-    );
-  }
+    ),
+  );
 
+  // ✅ Nettoyer les controllers après fermeture du modal
+  dateController.dispose();
+  heureController.dispose();
+  motifController.dispose();
+}
   Future<void> _annulerRdv(int id) async {
     final confirm = await showDialog<bool>(
       context: context,

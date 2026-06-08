@@ -3,9 +3,16 @@ import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+// Ajouter l'import en haut de base_dashboard.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../notifications_screen.dart';
 
-// ─── Widget de base partagé pour tous les dashboards ───────────────────────
-class BaseDashboard extends StatelessWidget {
+
+// ─── Widget de base partagé pour tous les dashboards ───────────────────────),
+
+class BaseDashboard extends StatefulWidget {
   final UserModel user;
   final String title;
   final List<Widget> children;
@@ -20,8 +27,41 @@ class BaseDashboard extends StatelessWidget {
   });
 
   @override
+  State<BaseDashboard> createState() => _BaseDashboardState();
+}
+
+class _BaseDashboardState extends State<BaseDashboard> {
+  int _nonLues = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargerNotifications();
+  }
+
+  Future<void> _chargerNotifications() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.tokenKey);
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/rendez-vous/notifications'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) setState(() => _nonLues = data['non_lues'] ?? 0);
+      }
+    } catch (e) {
+      debugPrint('Erreur notifs: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? UserRole.getRoleColor(user.role);
+    final color = widget.accentColor ?? UserRole.getRoleColor(widget.user.role);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -31,16 +71,42 @@ class BaseDashboard extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
+            Text(widget.title,
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600)),
-            Text(user.fullName,
+                    color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(widget.user.fullName,
                 style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         ),
         actions: [
+          // ✅ Bouton notifications avec badge
+          Stack(children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+              onPressed: () async {
+                await Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => NotificationsScreen(user: widget.user),
+                ));
+                _chargerNotifications(); // Rafraîchir après retour
+              },
+            ),
+            if (_nonLues > 0)
+              Positioned(
+                right: 6, top: 6,
+                child: Container(
+                  width: 18, height: 18,
+                  decoration: const BoxDecoration(
+                    color: Colors.red, shape: BoxShape.circle),
+                  child: Center(
+                    child: Text('$_nonLues',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+          ]),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.white),
             onPressed: () async {
@@ -56,9 +122,9 @@ class BaseDashboard extends StatelessWidget {
           ),
         ],
       ),
+      // ... reste du build identique
       body: Column(
         children: [
-          // ── Header coloré ─────────────────────────────────────────────
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
@@ -69,63 +135,41 @@ class BaseDashboard extends StatelessWidget {
                 bottomRight: Radius.circular(28),
               ),
             ),
-            child: Row(
-              children: [
+            child: Row(children: [
+              Container(
+                width: 52, height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(UserRole.getIcon(widget.user.role),
+                    color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Bonjour, ${widget.user.prenom} !',
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
                 Container(
-                  width: 52,
-                  height: 52,
+                  margin: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Icon(
-                    UserRole.getIcon(user.role),
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bonjour, ${user.prenom} !',
+                  child: Text(UserRole.getLabel(widget.user.role),
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        UserRole.getLabel(user.role),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
+                          color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                 ),
-              ],
-            ),
+              ]),
+            ]),
           ),
-
-          // ── Contenu ───────────────────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: children,
+                children: widget.children,
               ),
             ),
           ),
@@ -134,7 +178,6 @@ class BaseDashboard extends StatelessWidget {
     );
   }
 }
-
 // ─── Carte de fonctionnalité rapide ────────────────────────────────────────
 class QuickActionCard extends StatelessWidget {
   final String title;
