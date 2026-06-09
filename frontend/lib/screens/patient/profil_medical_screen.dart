@@ -29,7 +29,16 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
   final _medicamentsController = TextEditingController();
   final _medecinController = TextEditingController();
 
-  final List<String> _groupesSanguins = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  final List<String> _groupesSanguins = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-'
+  ];
   final List<String> _sexes = ['M', 'F', 'autre'];
 
   @override
@@ -46,7 +55,30 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
       setState(() {
         _groupeSanguin = p['groupe_sanguin'];
         _sexe = p['sexe'];
-        _dateNaissanceController.text = p['date_naissance'] ?? '';
+
+        // ✅ Convertir AAAA-MM-JJ → JJ/MM/AAAA pour l'affichage
+        final dateRaw = p['date_naissance']?.toString() ?? '';
+        if (dateRaw.isNotEmpty) {
+          if (dateRaw.contains('T')) {
+            // Format ISO : prendre seulement la partie date
+            final dateOnly = dateRaw.split('T')[0];
+            final parts = dateOnly.split('-');
+            if (parts.length == 3) {
+              _dateNaissanceController.text =
+                  '${parts[2]}/${parts[1]}/${parts[0]}';
+            }
+          } else if (dateRaw.contains('-') && dateRaw.length >= 10) {
+            // Format AAAA-MM-JJ
+            final parts = dateRaw.substring(0, 10).split('-');
+            if (parts.length == 3) {
+              _dateNaissanceController.text =
+                  '${parts[2]}/${parts[1]}/${parts[0]}';
+            }
+          } else {
+            _dateNaissanceController.text = dateRaw;
+          }
+        }
+
         _tailleController.text = p['taille']?.toString() ?? '';
         _poidsController.text = p['poids']?.toString() ?? '';
         _allergiesController.text = p['allergies'] ?? '';
@@ -62,25 +94,50 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
+    // ✅ Convertir JJ/MM/AAAA → AAAA-MM-JJ pour MySQL
+    String dateNaissance = _dateNaissanceController.text.trim();
+    if (dateNaissance.contains('/')) {
+      final parts = dateNaissance.split('/');
+      if (parts.length == 3) {
+        dateNaissance =
+            '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+      }
+    }
+
     final result = await _service.sauvegarderProfilMedical({
       'groupe_sanguin': _groupeSanguin,
       'sexe': _sexe,
-      'date_naissance': _dateNaissanceController.text,
-      'taille': double.tryParse(_tailleController.text),
-      'poids': double.tryParse(_poidsController.text),
-      'allergies': _allergiesController.text,
-      'antecedents': _antecedentsController.text,
-      'medicaments_actuels': _medicamentsController.text,
-      'medecin_traitant': _medecinController.text,
+      'date_naissance': dateNaissance.isEmpty ? null : dateNaissance,
+      'taille': double.tryParse(_tailleController.text.trim()),
+      'poids': double.tryParse(_poidsController.text.trim()),
+      'allergies': _allergiesController.text.trim(),
+      'antecedents': _antecedentsController.text.trim(),
+      'medicaments_actuels': _medicamentsController.text.trim(),
+      'medecin_traitant': _medecinController.text.trim(),
     });
 
-    setState(() { _isSaving = false; _isEditing = false; });
+    setState(() {
+      _isSaving = false;
+      _isEditing = false;
+    });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result['message'] ?? 'Sauvegardé !'),
-        backgroundColor: result['succes'] == true ? AppColors.success : AppColors.error,
+        content: Row(children: [
+          Icon(
+            result['succes'] == true
+                ? Icons.check_circle_outline
+                : Icons.error_outline,
+            color: Colors.white,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(result['message'] ?? '')),
+        ]),
+        backgroundColor:
+            result['succes'] == true ? AppColors.success : AppColors.error,
       ));
+      if (result['succes'] == true) _chargerProfil();
     }
   }
 
@@ -103,14 +160,19 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF00897B),
         title: const Text('Profil médical',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: Icon(_isEditing ? Icons.close : Icons.edit_outlined, color: Colors.white),
+            icon: Icon(_isEditing ? Icons.close : Icons.edit_outlined,
+                color: Colors.white),
             onPressed: () => setState(() => _isEditing = !_isEditing),
           ),
         ],
@@ -126,20 +188,36 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF00897B), Color(0xFF00ACC1)]),
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFF00897B), Color(0xFF00ACC1)]),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                      _statItem('Groupe sanguin', _groupeSanguin ?? '--', Icons.bloodtype_outlined),
-                      _statItem('Taille', _tailleController.text.isEmpty ? '--' : '${_tailleController.text}cm', Icons.height),
-                      _statItem('Poids', _poidsController.text.isEmpty ? '--' : '${_poidsController.text}kg', Icons.monitor_weight_outlined),
-                    ]),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _statItem('Groupe sanguin', _groupeSanguin ?? '--',
+                              Icons.bloodtype_outlined),
+                          _statItem(
+                              'Taille',
+                              _tailleController.text.isEmpty
+                                  ? '--'
+                                  : '${_tailleController.text}cm',
+                              Icons.height),
+                          _statItem(
+                              'Poids',
+                              _poidsController.text.isEmpty
+                                  ? '--'
+                                  : '${_poidsController.text}kg',
+                              Icons.monitor_weight_outlined),
+                        ]),
                   ),
 
                   const SizedBox(height: 20),
 
-                  _buildCard('Informations de base', Icons.person_outline, const Color(0xFF00897B), [
-                    _buildDropdown('Sexe', _sexes, _sexe, (v) => setState(() => _sexe = v)),
+                  _buildCard('Informations de base', Icons.person_outline,
+                      const Color(0xFF00897B), [
+                    _buildDropdown('Sexe', _sexes, _sexe,
+                        (v) => setState(() => _sexe = v)),
                     const SizedBox(height: 14),
                     AppTextField(
                       label: 'Date de naissance',
@@ -148,19 +226,26 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
                       controller: _dateNaissanceController,
                     ),
                     const SizedBox(height: 14),
-                    _buildDropdown('Groupe sanguin', _groupesSanguins, _groupeSanguin,
+                    _buildDropdown(
+                        'Groupe sanguin',
+                        _groupesSanguins,
+                        _groupeSanguin,
                         (v) => setState(() => _groupeSanguin = v)),
                     const SizedBox(height: 14),
                     Row(children: [
-                      Expanded(child: AppTextField(
-                        label: 'Taille (cm)', hint: 'Ex: 175',
+                      Expanded(
+                          child: AppTextField(
+                        label: 'Taille (cm)',
+                        hint: 'Ex: 175',
                         prefixIcon: Icons.height,
                         controller: _tailleController,
                         keyboardType: TextInputType.number,
                       )),
                       const SizedBox(width: 12),
-                      Expanded(child: AppTextField(
-                        label: 'Poids (kg)', hint: 'Ex: 70',
+                      Expanded(
+                          child: AppTextField(
+                        label: 'Poids (kg)',
+                        hint: 'Ex: 70',
                         prefixIcon: Icons.monitor_weight_outlined,
                         controller: _poidsController,
                         keyboardType: TextInputType.number,
@@ -170,7 +255,8 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
 
                   const SizedBox(height: 16),
 
-                  _buildCard('Antécédents médicaux', Icons.history_outlined, const Color(0xFF1E88E5), [
+                  _buildCard('Antécédents médicaux', Icons.history_outlined,
+                      const Color(0xFF1E88E5), [
                     AppTextField(
                       label: 'Antécédents',
                       hint: 'Ex: Diabète, hypertension...',
@@ -182,7 +268,8 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
 
                   const SizedBox(height: 16),
 
-                  _buildCard('Allergies', Icons.warning_amber_outlined, const Color(0xFFF4511E), [
+                  _buildCard('Allergies', Icons.warning_amber_outlined,
+                      const Color(0xFFF4511E), [
                     AppTextField(
                       label: 'Allergies connues',
                       hint: 'Ex: Pénicilline, arachides...',
@@ -194,7 +281,8 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
 
                   const SizedBox(height: 16),
 
-                  _buildCard('Traitements en cours', Icons.medication_outlined, const Color(0xFF8E24AA), [
+                  _buildCard('Traitements en cours', Icons.medication_outlined,
+                      const Color(0xFF8E24AA), [
                     AppTextField(
                       label: 'Médicaments actuels',
                       hint: 'Ex: Metformine 500mg...',
@@ -206,7 +294,8 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
 
                   const SizedBox(height: 16),
 
-                  _buildCard('Médecin traitant', Icons.local_hospital_outlined, const Color(0xFF00897B), [
+                  _buildCard('Médecin traitant', Icons.local_hospital_outlined,
+                      const Color(0xFF00897B), [
                     AppTextField(
                       label: 'Nom du médecin',
                       hint: 'Dr. Nom Prénom',
@@ -237,24 +326,33 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
     return Column(children: [
       Icon(icon, color: Colors.white70, size: 20),
       const SizedBox(height: 4),
-      Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+      Text(value,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
       Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
     ]);
   }
 
-  Widget _buildCard(String title, IconData icon, Color color, List<Widget> children) {
+  Widget _buildCard(
+      String title, IconData icon, Color color, List<Widget> children) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Icon(icon, color: color, size: 18),
           const SizedBox(width: 8),
-          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary)),
         ]),
         const SizedBox(height: 16),
         if (!_isEditing)
@@ -265,7 +363,8 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
     );
   }
 
-  Widget _buildDropdown(String label, List<String> items, String? value, ValueChanged<String?> onChanged) {
+  Widget _buildDropdown(String label, List<String> items, String? value,
+      ValueChanged<String?> onChanged) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: AppTextStyles.label),
       const SizedBox(height: 6),
@@ -275,12 +374,20 @@ class _ProfilMedicalScreenState extends State<ProfilMedicalScreen> {
         decoration: InputDecoration(
           filled: true,
           fillColor: AppColors.inputFill,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.divider)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        hint: Text('Sélectionner', style: TextStyle(color: AppColors.textSecondary.withOpacity(0.5))),
-        items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+        hint: Text('Sélectionner',
+            style: TextStyle(color: AppColors.textSecondary.withOpacity(0.5))),
+        items: items
+            .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+            .toList(),
       ),
     ]);
   }

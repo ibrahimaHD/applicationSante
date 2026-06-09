@@ -9,6 +9,13 @@ const {
 } = require('../controllers/medecinController');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
 
+const {
+  ajouterResultatMedecin
+} = require('../controllers/resultatsController');
+
+// Ajouter cette ligne dans les routes médecin
+router.post('/resultats', ajouterResultatMedecin);
+
 router.use(verifierToken);
 router.use(autoriserRoles('medecin', 'admin', 'superadmin'));
 

@@ -15,10 +15,27 @@ const getMonProfil = async (req, res) => {
 };
 
 // ── MES PATIENTS ────────────────────────────────────────
+
 const getMesPatients = async (req, res) => {
   try {
-    // Patients ayant eu au moins une consultation avec ce médecin
-    const [rows] = await db.query(
+    // Patients via rendez-vous avec ce médecin
+    const [viaRdv] = await db.query(
+      `SELECT DISTINCT u.id, u.nom, u.prenom, u.email, u.telephone,
+              p.date_naissance, p.groupe_sanguin,
+              pm.allergies, pm.antecedents,
+              MAX(r.date_rdv) AS derniere_consultation
+       FROM utilisateurs u
+       JOIN rendez_vous r ON u.id = r.patient_id
+       LEFT JOIN patients p ON u.id = p.utilisateur_id
+       LEFT JOIN profils_medicaux pm ON u.id = pm.utilisateur_id
+       WHERE r.medecin_id = ?
+       GROUP BY u.id
+       ORDER BY derniere_consultation DESC`,
+      [req.utilisateur.id]
+    );
+
+    // Patients via consultations directes (medecin_nom)
+    const [viaConsultations] = await db.query(
       `SELECT DISTINCT u.id, u.nom, u.prenom, u.email, u.telephone,
               p.date_naissance, p.groupe_sanguin,
               pm.allergies, pm.antecedents,
@@ -32,7 +49,16 @@ const getMesPatients = async (req, res) => {
        ORDER BY derniere_consultation DESC`,
       [req.utilisateur.id]
     );
-    res.json({ succes: true, patients: rows });
+
+    // Fusionner et dédupliquer
+    const tousPatients = [...viaRdv];
+    for (const p of viaConsultations) {
+      if (!tousPatients.find(x => x.id === p.id)) {
+        tousPatients.push(p);
+      }
+    }
+
+    res.json({ succes: true, patients: tousPatients });
   } catch (error) {
     console.error(error);
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });
@@ -90,31 +116,126 @@ const getDossierPatient = async (req, res) => {
 };
 
 // ── CONSULTATIONS ───────────────────────────────────────
+
+const db = require('../config/database');
+
 const ajouterConsultation = async (req, res) => {
   try {
-    const { patient_id, motif, diagnostic, traitement, notes, date_consultation, rdv_id } = req.body;
+    const {
+      patient_id,
+      motif,
+      diagnostic,
+      traitement,
+      notes,
+      date_consultation,
+      rdv_id
+    } = req.body;
 
-    if (!patient_id || !motif || !date_consultation) {
-      return res.status(400).json({ succes: false, message: 'Patient, motif et date requis.' });
+    console.log('=== AJOUTER CONSULTATION ===');
+    console.log('Body reçu:', req.body);
+    console.log('Médecin ID:', req.utilisateur.id);
+
+    // Validation
+    if (!patient_id) {
+      return res.status(400).json({
+        succes: false,
+        message: 'Patient requis.'
+      });
+    }
+    if (!motif) {
+      return res.status(400).json({
+        succes: false,
+        message: 'Motif requis.'
+      });
+    }
+    if (!date_consultation) {
+      return res.status(400).json({
+        succes: false,
+        message: 'Date requise.'
+      });
     }
 
-    const [result] = await db.query(
-      `INSERT INTO consultations (patient_id, medecin_id, medecin_nom, motif, diagnostic, traitement, notes, date_consultation)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [patient_id, req.utilisateur.id,
-       `Dr. ${req.utilisateur.prenom} ${req.utilisateur.nom}`,
-       motif, diagnostic, traitement, notes, date_consultation]
+    // Convertir la date
+    let dateFormatee = date_consultation;
+    if (dateFormatee.includes('T')) {
+      dateFormatee = dateFormatee.split('T')[0];
+    } else if (dateFormatee.includes('/')) {
+      const [j, m, a] = dateFormatee.split('/');
+      dateFormatee = `${a}-${m.padStart(2,'0')}-${j.padStart(2,'0')}`;
+    }
+
+    console.log('Date formatée:', dateFormatee);
+
+    // Vérifier que le patient existe
+    const [patient] = await db.query(
+      'SELECT id FROM utilisateurs WHERE id = ?',
+      [patient_id]
     );
 
-    // Marquer le RDV comme terminé
-    if (rdv_id) {
-      await db.query('UPDATE rendez_vous SET statut = ? WHERE id = ?', ['termine', rdv_id]);
+    if (patient.length === 0) {
+      return res.status(404).json({
+        succes: false,
+        message: 'Patient introuvable.'
+      });
     }
 
-    res.status(201).json({ succes: true, message: 'Consultation ajoutée !', id: result.insertId });
+    // Insérer la consultation
+    const [result] = await db.query(
+      `INSERT INTO consultations 
+        (patient_id, medecin_id, medecin_nom, motif, 
+         diagnostic, traitement, notes, date_consultation)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        patient_id,
+        req.utilisateur.id,
+        `Dr. ${req.utilisateur.prenom} ${req.utilisateur.nom}`,
+        motif,
+        diagnostic || null,
+        traitement || null,
+        notes || null,
+        dateFormatee
+      ]
+    );
+
+    console.log('Consultation créée ID:', result.insertId);
+
+    // Marquer le RDV comme terminé si fourni
+    if (rdv_id) {
+      await db.query(
+        'UPDATE rendez_vous SET statut = ? WHERE id = ?',
+        ['termine', rdv_id]
+      );
+    }
+
+    // Notifier le patient
+    await db.query(
+      `INSERT INTO notifications (utilisateur_id, titre, message, type, data_json)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        patient_id,
+        'Nouvelle consultation ajoutée',
+        `Dr. ${req.utilisateur.prenom} ${req.utilisateur.nom} a enregistré une consultation du ${dateFormatee}. Motif : ${motif}`,
+        'consultation',
+        JSON.stringify({
+          consultation_id: result.insertId,
+          motif,
+          date: dateFormatee
+        })
+      ]
+    );
+
+    res.status(201).json({
+      succes: true,
+      message: 'Consultation ajoutée avec succès !',
+      id: result.insertId
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+    console.error('ERREUR ajouterConsultation:', error);
+    res.status(500).json({
+      succes: false,
+      message: 'Erreur serveur: ' + error.message
+    });
   }
 };
 

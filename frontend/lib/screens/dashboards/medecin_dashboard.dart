@@ -6,11 +6,12 @@ import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import 'base_dashboard.dart';
 import '../medecin/mes_patients_screen.dart';
-//import '../medecin/ajouter_consultation_screen.dart';
+import '../medecin/ajouter_consultation_screen.dart';
 import '../medecin/creer_ordonnance_screen.dart';
 import '../medecin/mes_consultations_screen.dart';
 //import '../medecin/scanner_qr_screen.dart';
 import '../medecin/mes_rdv_medecin_screen.dart';
+
 
 class MedecinDashboard extends StatefulWidget {
   final UserModel user;
@@ -139,7 +140,7 @@ class _MedecinDashboardState extends State<MedecinDashboard> {
           subtitle: 'Diagnostic, traitement, notes',
           icon: Icons.medical_services_outlined,
           color: const Color(0xFF00897B),
-          // onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AjouterConsultationScreen(user: widget.user))),
+        //   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AjouterConsultationScreen(user: widget.user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(

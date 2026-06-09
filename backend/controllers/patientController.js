@@ -32,38 +32,43 @@ const sauvegarderProfilMedical = async (req, res) => {
     const patientId = req.utilisateur.id;
     const {
       groupe_sanguin, sexe, date_naissance, taille, poids,
-      allergies, antecedents, medicaments_actuels, medecin_traitant, numero_assurance
+      allergies, antecedents, medicaments_actuels, 
+      medecin_traitant, numero_assurance
     } = req.body;
- 
+
     const dateConverti = convertirDate(date_naissance);
- 
-    const [existant] = await db.query(
-      'SELECT id FROM profils_medicaux WHERE utilisateur_id = ?',
-      [patientId]
+
+    // ✅ Utiliser INSERT ... ON DUPLICATE KEY UPDATE
+    // pour éviter tout problème de doublon
+    await db.query(
+      `INSERT INTO profils_medicaux 
+        (utilisateur_id, groupe_sanguin, sexe, date_naissance,
+         taille, poids, allergies, antecedents, medicaments_actuels,
+         medecin_traitant, numero_assurance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         groupe_sanguin        = VALUES(groupe_sanguin),
+         sexe                  = VALUES(sexe),
+         date_naissance        = VALUES(date_naissance),
+         taille                = VALUES(taille),
+         poids                 = VALUES(poids),
+         allergies             = VALUES(allergies),
+         antecedents           = VALUES(antecedents),
+         medicaments_actuels   = VALUES(medicaments_actuels),
+         medecin_traitant      = VALUES(medecin_traitant),
+         numero_assurance      = VALUES(numero_assurance)`,
+      [
+        patientId, groupe_sanguin, sexe, dateConverti,
+        taille, poids, allergies, antecedents,
+        medicaments_actuels, medecin_traitant, numero_assurance
+      ]
     );
- 
-    if (existant.length > 0) {
-      await db.query(
-        `UPDATE profils_medicaux SET groupe_sanguin=?, sexe=?, date_naissance=?,
-         taille=?, poids=?, allergies=?, antecedents=?, medicaments_actuels=?,
-         medecin_traitant=?, numero_assurance=? WHERE utilisateur_id=?`,
-        [groupe_sanguin, sexe, dateConverti, taille, poids,
-         allergies, antecedents, medicaments_actuels, medecin_traitant, numero_assurance, patientId]
-      );
-    } else {
-      await db.query(
-        `INSERT INTO profils_medicaux (utilisateur_id, groupe_sanguin, sexe, date_naissance,
-         taille, poids, allergies, antecedents, medicaments_actuels, medecin_traitant, numero_assurance)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [patientId, groupe_sanguin, sexe, dateConverti, taille, poids,
-         allergies, antecedents, medicaments_actuels, medecin_traitant, numero_assurance]
-      );
-    }
- 
+
     res.json({ succes: true, message: 'Profil médical sauvegardé !' });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+    console.error('Erreur sauvegarderProfilMedical:', error);
+    res.status(500).json({ succes: false, message: 'Erreur serveur: ' + error.message });
   }
 };
  
@@ -420,17 +425,30 @@ const getInfosPersonnelles = async (req, res) => {
 const majInfosPersonnelles = async (req, res) => {
   try {
     const { nom, prenom, telephone, adresse } = req.body;
+
+    // Mettre à jour utilisateurs
     await db.query(
       'UPDATE utilisateurs SET nom=?, prenom=?, telephone=? WHERE id=?',
       [nom, prenom, telephone, req.utilisateur.id]
     );
+
+    // ✅ Utiliser INSERT ... ON DUPLICATE KEY UPDATE
+    // pour la table patients aussi
     await db.query(
-      'UPDATE patients SET adresse=? WHERE utilisateur_id=?',
-      [adresse, req.utilisateur.id]
+      `INSERT INTO patients (utilisateur_id, adresse)
+       VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE adresse = VALUES(adresse)`,
+      [req.utilisateur.id, adresse]
     );
+
     res.json({ succes: true, message: 'Informations mises à jour !' });
+
   } catch (error) {
-    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+    console.error('Erreur majInfosPersonnelles:', error);
+    res.status(500).json({
+      succes: false,
+      message: 'Erreur serveur: ' + error.message
+    });
   }
 };
 module.exports = {
