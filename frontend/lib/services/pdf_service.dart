@@ -1,479 +1,253 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
+import '../models/user_model.dart';
 
 class PdfService {
-  /// Génère et télécharge/partage le dossier médical en PDF
   static Future<void> exporterDossierMedical({
     required BuildContext context,
+    required UserModel user,
     required Map<String, dynamic> dossier,
-    required String nomPatient,
   }) async {
     final pdf = pw.Document();
 
-    final patient = dossier['patient'] ?? {};
-    final profil = dossier['profil_medical'] ?? {};
-    final consultations = dossier['consultations'] as List? ?? [];
-    final vaccinations = dossier['vaccinations'] as List? ?? [];
+    final patient   = dossier['patient']       ?? {};
+    final profil    = dossier['profil_medical'] ?? {};
+    final consults  = (dossier['consultations'] as List?) ?? [];
+    final vaccins   = (dossier['vaccinations']  as List?) ?? [];
 
-    // ── Couleurs et styles ─────────────────────────────────────────
-    const colorPrimary = PdfColor.fromInt(0xFF1E88E5);
-    const colorSuccess = PdfColor.fromInt(0xFF43A047);
-    const colorSecondary = PdfColor.fromInt(0xFF546E7A);
-    const colorBackground = PdfColor.fromInt(0xFFF5F9FF);
-
-    final styleTitle = pw.TextStyle(
-      fontSize: 22,
-      fontWeight: pw.FontWeight.bold,
-      color: colorPrimary,
-    );
-    final styleHeading = pw.TextStyle(
-      fontSize: 14,
-      fontWeight: pw.FontWeight.bold,
-      color: colorPrimary,
-    );
-    final styleLabel = pw.TextStyle(
-      fontSize: 10,
-      color: colorSecondary,
-    );
-    final styleValue = pw.TextStyle(
-      fontSize: 11,
-      fontWeight: pw.FontWeight.bold,
-      color: PdfColors.grey900,
-    );
-    final styleNormal = pw.TextStyle(
-      fontSize: 10,
-      color: PdfColors.grey800,
-    );
-
-    // ── Helpers ────────────────────────────────────────────────────
-    pw.Widget infoRow(String label, String value) {
-      return pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(vertical: 3),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.SizedBox(
-              width: 130,
-              child: pw.Text(label, style: styleLabel),
-            ),
-            pw.Expanded(
-              child: pw.Text(value.isEmpty ? '—' : value, style: styleValue),
-            ),
-          ],
-        ),
-      );
-    }
-
-    pw.Widget sectionCard({
-      required String title,
-      required List<pw.Widget> children,
-    }) {
-      return pw.Container(
-        margin: const pw.EdgeInsets.only(bottom: 16),
-        decoration: pw.BoxDecoration(
-          color: PdfColors.white,
-          borderRadius: pw.BorderRadius.circular(8),
-          border: pw.Border.all(color: PdfColor.fromInt(0xFFE0E0E0)),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFE3F2FD),
-                borderRadius: const pw.BorderRadius.only(
-                  topLeft: pw.Radius.circular(8),
-                  topRight: pw.Radius.circular(8),
-                ),
-              ),
-              child: pw.Text(title, style: styleHeading),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.all(14),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: children,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ── PAGE 1 : Identité & Profil médical ─────────────────────────
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        header: (context) => pw.Column(
-          children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('LaafiBa', style: styleTitle),
-                    pw.Text(
-                      'Votre santé, notre priorité',
-                      style: pw.TextStyle(fontSize: 10, color: colorSecondary),
-                    ),
-                  ],
-                ),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      'DOSSIER MÉDICAL',
-                      style: pw.TextStyle(
-                        fontSize: 13,
-                        fontWeight: pw.FontWeight.bold,
-                        color: colorPrimary,
-                      ),
-                    ),
-                    pw.Text(
-                      'Généré le : ${_dateAujourdhui()}',
-                      style: pw.TextStyle(fontSize: 9, color: colorSecondary),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 8),
-            pw.Divider(color: colorPrimary, thickness: 1.5),
-            pw.SizedBox(height: 8),
-          ],
-        ),
-        footer: (context) => pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Text('LaafiBa — Document confidentiel', style: pw.TextStyle(fontSize: 8, color: colorSecondary)),
-            pw.Text('Page ${context.pageNumber} / ${context.pagesCount}', style: pw.TextStyle(fontSize: 8, color: colorSecondary)),
-          ],
-        ),
-        build: (context) => [
-          // Bannière patient
-          pw.Container(
-            padding: const pw.EdgeInsets.all(16),
-            margin: const pw.EdgeInsets.only(bottom: 20),
-            decoration: pw.BoxDecoration(
-              color: colorPrimary,
-              borderRadius: pw.BorderRadius.circular(10),
-            ),
-            child: pw.Row(
-              children: [
-                pw.Container(
-                  width: 50,
-                  height: 50,
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    shape: pw.BoxShape.circle,
-                  ),
-                  child: pw.Center(
-                    child: pw.Text(
-                      _initiales(
-                        patient['prenom'] ?? '',
-                        patient['nom'] ?? '',
-                      ),
-                      style: pw.TextStyle(
-                        fontSize: 20,
-                        fontWeight: pw.FontWeight.bold,
-                        color: colorPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-                pw.SizedBox(width: 16),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      '${patient['prenom'] ?? ''} ${patient['nom'] ?? ''}'.trim(),
-                      style: pw.TextStyle(
-                        fontSize: 18,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.white,
-                      ),
-                    ),
-                    pw.Text(
-                      patient['email'] ?? '',
-                      style: pw.TextStyle(fontSize: 11, color: PdfColor.fromInt(0xCCFFFFFF)),
-                    ),
-                  ],
-                ),
-              ],
+        header: (_) => pw.Container(
+          padding: const pw.EdgeInsets.only(bottom: 12),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(
+              bottom: pw.BorderSide(color: PdfColors.teal700, width: 2),
             ),
           ),
-
-          // Résumé médical rapide
-          pw.Container(
-            padding: const pw.EdgeInsets.all(14),
-            margin: const pw.EdgeInsets.only(bottom: 20),
-            decoration: pw.BoxDecoration(
-              color: colorBackground,
-              borderRadius: pw.BorderRadius.circular(8),
-              border: pw.Border.all(color: PdfColor.fromInt(0xFF1E88E5), width: 0.5),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-              children: [
-                _resumeItem('Groupe sanguin', profil['groupe_sanguin'] ?? '—', styleLabel, styleValue),
-                _dividerV(),
-                _resumeItem(
-                  'Taille',
-                  profil['taille'] != null ? '${profil['taille']} cm' : '—',
-                  styleLabel,
-                  styleValue,
-                ),
-                _dividerV(),
-                _resumeItem(
-                  'Poids',
-                  profil['poids'] != null ? '${profil['poids']} kg' : '—',
-                  styleLabel,
-                  styleValue,
-                ),
-                _dividerV(),
-                _resumeItem(
-                  'Consultations',
-                  '${consultations.length}',
-                  styleLabel,
-                  styleValue,
-                ),
-                _dividerV(),
-                _resumeItem(
-                  'Vaccinations',
-                  '${vaccinations.length}',
-                  styleLabel,
-                  styleValue,
-                ),
-              ],
-            ),
-          ),
-
-          // Section Identité
-          sectionCard(
-            title: 'Identité du patient',
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              infoRow('Nom complet', '${patient['prenom'] ?? ''} ${patient['nom'] ?? ''}'),
-              infoRow('Email', patient['email'] ?? ''),
-              infoRow('Téléphone', patient['telephone'] ?? ''),
-              infoRow('Date de naissance', profil['date_naissance']?.toString() ?? ''),
-              infoRow('Sexe', _labelSexe(profil['sexe'])),
-              infoRow('Adresse', patient['adresse'] ?? ''),
-              infoRow('N° Assurance', profil['numero_assurance'] ?? ''),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('LaafiBa',
+                      style: pw.TextStyle(
+                          fontSize: 22,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.teal700)),
+                  pw.Text('Dossier médical',
+                      style: pw.TextStyle(
+                          fontSize: 13,
+                          color: PdfColors.grey700)),
+                ],
+              ),
+              pw.Text(
+                'Généré le ${_formatDate(DateTime.now().toString())}',
+                style: pw.TextStyle(
+                    fontSize: 11, color: PdfColors.grey600),
+              ),
             ],
           ),
-
-          // Section Profil médical
-          sectionCard(
-            title: 'Profil médical',
-            children: [
-              infoRow('Groupe sanguin', profil['groupe_sanguin'] ?? ''),
-              infoRow('Taille', profil['taille'] != null ? '${profil['taille']} cm' : ''),
-              infoRow('Poids', profil['poids'] != null ? '${profil['poids']} kg' : ''),
-              infoRow('Allergies', profil['allergies'] ?? ''),
-              infoRow('Antécédents', profil['antecedents'] ?? ''),
-              infoRow('Médicaments actuels', profil['medicaments_actuels'] ?? ''),
-              infoRow('Médecin traitant', profil['medecin_traitant'] ?? ''),
-            ],
+        ),
+        footer: (_) => pw.Container(
+          padding: const pw.EdgeInsets.only(top: 8),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(
+              top: pw.BorderSide(color: PdfColors.grey300),
+            ),
           ),
+          child: pw.Center(
+            child: pw.Text(
+              'Document confidentiel — LaafiBa © ${DateTime.now().year}',
+              style: pw.TextStyle(
+                  fontSize: 10, color: PdfColors.grey500),
+            ),
+          ),
+        ),
+        build: (_) => [
+          // ── Identité ──────────────────────────────────
+          _section('Identité du patient', PdfColors.teal700),
+          _infoGrid([
+            ['Nom complet', '${patient['prenom'] ?? ''} ${patient['nom'] ?? ''}'],
+            ['Email',       patient['email']     ?? '--'],
+            ['Téléphone',   patient['telephone'] ?? '--'],
+            ['Groupe sanguin', profil['groupe_sanguin'] ?? '--'],
+            ['Date de naissance', _formatDate(profil['date_naissance']?.toString() ?? '')],
+            ['Sexe',        profil['sexe'] ?? '--'],
+          ]),
 
-          // Section Consultations
-          sectionCard(
-            title: 'Historique des consultations (${consultations.length})',
-            children: consultations.isEmpty
-                ? [pw.Text('Aucune consultation enregistrée.', style: styleNormal)]
-                : consultations.map((c) {
-                    return pw.Container(
-                      margin: const pw.EdgeInsets.only(bottom: 10),
-                      padding: const pw.EdgeInsets.all(10),
-                      decoration: pw.BoxDecoration(
-                        color: colorBackground,
-                        borderRadius: pw.BorderRadius.circular(6),
-                        border: pw.Border.all(
-                          color: PdfColor.fromInt(0xFFE0E0E0),
-                        ),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                            children: [
-                              pw.Text(
-                                c['motif'] ?? '',
+          pw.SizedBox(height: 16),
+
+          // ── Informations médicales ─────────────────────
+          _section('Informations médicales', PdfColors.blue700),
+          _infoGrid([
+            ['Taille',    profil['taille'] != null ? '${profil['taille']} cm' : '--'],
+            ['Poids',     profil['poids']  != null ? '${profil['poids']} kg'  : '--'],
+            ['Allergies', profil['allergies'] ?? '--'],
+            ['Antécédents', profil['antecedents'] ?? '--'],
+            ['Traitements actuels', profil['medicaments_actuels'] ?? '--'],
+            ['Médecin traitant',    profil['medecin_traitant']    ?? '--'],
+          ]),
+
+          pw.SizedBox(height: 16),
+
+          // ── Consultations ─────────────────────────────
+          if (consults.isNotEmpty) ...[
+            _section('Consultations (${consults.length})', PdfColors.purple700),
+            pw.Table(
+              border: pw.TableBorder.all(
+                  color: PdfColors.grey300, width: 0.5),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2),
+                1: const pw.FlexColumnWidth(2),
+                2: const pw.FlexColumnWidth(3),
+                3: const pw.FlexColumnWidth(1.5),
+              },
+              children: [
+                // En-tête
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(
+                      color: PdfColors.purple50),
+                  children: ['Motif', 'Diagnostic', 'Traitement', 'Date']
+                      .map((h) => pw.Padding(
+                            padding: const pw.EdgeInsets.all(6),
+                            child: pw.Text(h,
                                 style: pw.TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: colorPrimary,
-                                ),
-                              ),
-                              pw.Text(
-                                c['date_consultation']?.toString() ?? '',
-                                style: pw.TextStyle(fontSize: 9, color: colorSecondary),
-                              ),
-                            ],
-                          ),
-                          if ((c['medecin_nom'] ?? '').isNotEmpty) ...[
-                            pw.SizedBox(height: 4),
-                            pw.Text('Médecin : ${c['medecin_nom']}', style: styleNormal),
-                          ],
-                          if ((c['diagnostic'] ?? '').isNotEmpty) ...[
-                            pw.SizedBox(height: 3),
-                            pw.Text('Diagnostic : ${c['diagnostic']}', style: styleNormal),
-                          ],
-                          if ((c['traitement'] ?? '').isNotEmpty) ...[
-                            pw.SizedBox(height: 3),
-                            pw.Text('Traitement : ${c['traitement']}', style: styleNormal),
-                          ],
-                        ],
-                      ),
-                    );
-                  }).toList(),
-          ),
-
-          // Section Vaccinations
-          sectionCard(
-            title: 'Vaccinations (${vaccinations.length})',
-            children: vaccinations.isEmpty
-                ? [pw.Text('Aucune vaccination enregistrée.', style: styleNormal)]
-                : [
-                    pw.Table(
-                      border: pw.TableBorder.all(
-                        color: PdfColor.fromInt(0xFFE0E0E0),
-                        width: 0.5,
-                      ),
-                      children: [
-                        // En-tête
-                        pw.TableRow(
-                          decoration: pw.BoxDecoration(
-                            color: PdfColor.fromInt(0xFFE3F2FD),
-                          ),
-                          children: [
-                            _cellule('Vaccin', styleHeading),
-                            _cellule('Date', styleHeading),
-                            _cellule('Statut', styleHeading),
-                          ],
-                        ),
-                        // Lignes
-                        ...vaccinations.map(
-                          (v) => pw.TableRow(
-                            children: [
-                              _cellule(v['nom_vaccin'] ?? '', styleNormal),
-                              _cellule(v['date_vaccination']?.toString() ?? '—', styleNormal),
-                              _cellule(
-                                v['statut'] == 'fait' ? 'Fait' : 'À faire',
-                                pw.TextStyle(
-                                  fontSize: 10,
-                                  color: v['statut'] == 'fait' ? colorSuccess : PdfColors.orange,
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-          ),
-
-          // Signature / Cachet
-          pw.SizedBox(height: 20),
-          pw.Container(
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColor.fromInt(0xFFE0E0E0)),
-              borderRadius: pw.BorderRadius.circular(8),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 10)),
+                          ))
+                      .toList(),
+                ),
+                // Lignes
+                ...consults.map((c) => pw.TableRow(
                   children: [
-                    pw.Text(
-                      'Document généré automatiquement',
-                      style: pw.TextStyle(fontSize: 9, color: colorSecondary),
-                    ),
-                    pw.Text(
-                      'LaafiBa — Plateforme de santé numérique',
-                      style: pw.TextStyle(
-                        fontSize: 9,
-                        color: colorSecondary,
-                        fontStyle: pw.FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Text(
-                  _dateAujourdhui(),
-                  style: pw.TextStyle(fontSize: 9, color: colorSecondary),
-                ),
+                    c['motif']      ?? '--',
+                    c['diagnostic'] ?? '--',
+                    c['traitement'] ?? '--',
+                    _formatDate(c['date_consultation']?.toString() ?? ''),
+                  ]
+                      .map((v) => pw.Padding(
+                            padding: const pw.EdgeInsets.all(6),
+                            child: pw.Text(v.toString(),
+                                style: const pw.TextStyle(fontSize: 9)),
+                          ))
+                      .toList(),
+                )),
               ],
             ),
-          ),
+            pw.SizedBox(height: 16),
+          ],
+
+          // ── Vaccinations ──────────────────────────────
+          if (vaccins.isNotEmpty) ...[
+            _section('Vaccinations (${vaccins.length})', PdfColors.green700),
+            pw.Table(
+              border: pw.TableBorder.all(
+                  color: PdfColors.grey300, width: 0.5),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(3),
+                1: const pw.FlexColumnWidth(2),
+                2: const pw.FlexColumnWidth(2),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(
+                      color: PdfColors.green50),
+                  children: ['Vaccin', 'Date', 'Statut']
+                      .map((h) => pw.Padding(
+                            padding: const pw.EdgeInsets.all(6),
+                            child: pw.Text(h,
+                                style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 10)),
+                          ))
+                      .toList(),
+                ),
+                ...vaccins.map((v) => pw.TableRow(
+                  children: [
+                    v['nom_vaccin'] ?? '--',
+                    _formatDate(v['date_vaccination']?.toString() ?? ''),
+                    v['statut'] == 'fait' ? 'Effectué' : 'À faire',
+                  ]
+                      .map((val) => pw.Padding(
+                            padding: const pw.EdgeInsets.all(6),
+                            child: pw.Text(val.toString(),
+                                style: const pw.TextStyle(fontSize: 9)),
+                          ))
+                      .toList(),
+                )),
+              ],
+            ),
+          ],
         ],
       ),
     );
 
-    // ── Afficher le dialogue d'impression / partage ───────────────
+    // ✅ Afficher l'aperçu + option téléchargement/partage
     await Printing.layoutPdf(
       onLayout: (_) async => pdf.save(),
-      name: 'dossier_medical_${nomPatient.replaceAll(' ', '_')}.pdf',
+      name: 'dossier_${patient['nom'] ?? 'patient'}_${DateTime.now().millisecondsSinceEpoch}.pdf',
     );
   }
 
-  // ── Helpers privés ─────────────────────────────────────────────
-  static String _dateAujourdhui() {
-    final now = DateTime.now();
-    return '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-  }
-
-  static String _initiales(String prenom, String nom) {
-    final p = prenom.isNotEmpty ? prenom[0].toUpperCase() : '';
-    final n = nom.isNotEmpty ? nom[0].toUpperCase() : '';
-    return '$p$n';
-  }
-
-  static String _labelSexe(dynamic sexe) {
-    switch (sexe) {
-      case 'M': return 'Masculin';
-      case 'F': return 'Féminin';
-      case 'autre': return 'Autre';
-      default: return '—';
-    }
-  }
-
-  static pw.Widget _resumeItem(
-    String label,
-    String value,
-    pw.TextStyle labelStyle,
-    pw.TextStyle valueStyle,
-  ) {
-    return pw.Column(
-      children: [
-        pw.Text(value, style: valueStyle),
-        pw.SizedBox(height: 2),
-        pw.Text(label, style: labelStyle),
-      ],
-    );
-  }
-
-  static pw.Widget _dividerV() {
+  // ── Helpers ────────────────────────────────────────────
+  static pw.Widget _section(String titre, PdfColor color) {
     return pw.Container(
-      width: 1,
-      height: 30,
-      color: PdfColor.fromInt(0xFFBBDEFB),
+      margin: const pw.EdgeInsets.only(bottom: 8),
+      padding: const pw.EdgeInsets.symmetric(
+          horizontal: 10, vertical: 6),
+      decoration: pw.BoxDecoration(
+        color: color,
+        borderRadius: pw.BorderRadius.circular(4),
+      ),
+      child: pw.Text(titre,
+          style: pw.TextStyle(
+              color: PdfColors.white,
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold)),
     );
   }
 
-  static pw.Widget _cellule(String texte, pw.TextStyle style) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: pw.Text(texte, style: style),
+  static pw.Widget _infoGrid(List<List<String>> data) {
+    return pw.GridView(
+      crossAxisCount: 2,
+      childAspectRatio: 4,
+      children: data.map((row) => pw.Container(
+        padding: const pw.EdgeInsets.symmetric(
+            horizontal: 8, vertical: 4),
+        decoration: const pw.BoxDecoration(
+          border: pw.Border(
+            bottom: pw.BorderSide(color: PdfColors.grey200),
+          ),
+        ),
+        child: pw.Row(children: [
+          pw.Text('${row[0]} : ',
+              style: pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey700,
+                  fontWeight: pw.FontWeight.bold)),
+          pw.Expanded(
+            child: pw.Text(row[1],
+                style: const pw.TextStyle(fontSize: 10)),
+          ),
+        ]),
+      )).toList(),
     );
+  }
+
+  static String _formatDate(String? date) {
+    if (date == null || date.isEmpty) return '--';
+    final s = date.contains('T') ? date.split('T')[0] : date;
+    if (s.length >= 10) {
+      final p = s.substring(0, 10).split('-');
+      if (p.length == 3) return '${p[2]}/${p[1]}/${p[0]}';
+    }
+    return s;
   }
 }

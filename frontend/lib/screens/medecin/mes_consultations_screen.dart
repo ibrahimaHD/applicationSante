@@ -15,8 +15,7 @@ class MesConsultationsScreen extends StatefulWidget {
       _MesConsultationsScreenState();
 }
 
-class _MesConsultationsScreenState
-    extends State<MesConsultationsScreen> {
+class _MesConsultationsScreenState extends State<MesConsultationsScreen> {
   List<dynamic> _patients = [];
   List<dynamic> _consultations = [];
   bool _isLoading = true;
@@ -42,19 +41,17 @@ class _MesConsultationsScreenState
       final headers = await _headers();
 
       final results = await Future.wait([
+        // ✅ CORRECTION : /medecins/ → /medecin/
         http.get(
-          Uri.parse('${AppConstants.baseUrl}/medecins/patients'),
+          Uri.parse('${AppConstants.baseUrl}/medecin/patients'),
           headers: headers,
         ),
+        // ✅ CORRECTION : /medecins/ → /medecin/
         http.get(
-          Uri.parse('${AppConstants.baseUrl}/medecins/consultations'),
+          Uri.parse('${AppConstants.baseUrl}/medecin/consultations'),
           headers: headers,
         ),
       ]);
-
-      debugPrint('Patients: ${results[0].statusCode}');
-      debugPrint('Consultations: ${results[1].statusCode}');
-      debugPrint('Consultations body: ${results[1].body}');
 
       if (results[0].statusCode == 200) {
         setState(() =>
@@ -72,7 +69,6 @@ class _MesConsultationsScreenState
   }
 
   Future<void> _ajouterConsultation() async {
-    // Variables locales réinitialisées à chaque ouverture
     int? patientId;
     final motifCtrl   = TextEditingController();
     final diagCtrl    = TextEditingController();
@@ -100,14 +96,12 @@ class _MesConsultationsScreenState
             padding: const EdgeInsets.all(24),
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Poignée
                   Container(
                     width: 40, height: 4,
                     decoration: BoxDecoration(
@@ -116,7 +110,6 @@ class _MesConsultationsScreenState
                     ),
                   ),
                   const SizedBox(height: 16),
-
                   const Text('Nouvelle consultation',
                       style: AppTextStyles.heading2),
                   const SizedBox(height: 20),
@@ -125,8 +118,7 @@ class _MesConsultationsScreenState
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Patient *',
-                          style: AppTextStyles.label),
+                      const Text('Patient *', style: AppTextStyles.label),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<int>(
                         value: patientId,
@@ -144,16 +136,13 @@ class _MesConsultationsScreenState
                               color: AppColors.primary,
                               size: 20),
                           hintText: 'Sélectionner le patient',
-                          contentPadding:
-                              const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
                         ),
                         items: _patients.map((p) {
                           final id = p['id'] is int
                               ? p['id'] as int
-                              : int.tryParse(
-                                      p['id'].toString()) ??
-                                  0;
+                              : int.tryParse(p['id'].toString()) ?? 0;
                           return DropdownMenuItem<int>(
                             value: id,
                             child: Text(
@@ -167,8 +156,6 @@ class _MesConsultationsScreenState
                   ),
 
                   const SizedBox(height: 14),
-
-                  // Motif
                   AppTextField(
                     label: 'Motif *',
                     hint: 'Raison de la consultation',
@@ -176,8 +163,6 @@ class _MesConsultationsScreenState
                     controller: motifCtrl,
                   ),
                   const SizedBox(height: 14),
-
-                  // Diagnostic
                   AppTextField(
                     label: 'Diagnostic',
                     hint: 'Diagnostic posé',
@@ -186,8 +171,6 @@ class _MesConsultationsScreenState
                     maxLines: 2,
                   ),
                   const SizedBox(height: 14),
-
-                  // Traitement
                   AppTextField(
                     label: 'Traitement',
                     hint: 'Traitement prescrit',
@@ -196,8 +179,6 @@ class _MesConsultationsScreenState
                     maxLines: 2,
                   ),
                   const SizedBox(height: 14),
-
-                  // Notes
                   AppTextField(
                     label: 'Notes',
                     hint: 'Observations complémentaires',
@@ -206,8 +187,6 @@ class _MesConsultationsScreenState
                     maxLines: 2,
                   ),
                   const SizedBox(height: 14),
-
-                  // Date
                   AppTextField(
                     label: 'Date *',
                     hint: 'JJ/MM/AAAA',
@@ -217,7 +196,6 @@ class _MesConsultationsScreenState
                   ),
                   const SizedBox(height: 24),
 
-                  // Bouton enregistrer
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -229,65 +207,58 @@ class _MesConsultationsScreenState
                                 color: Colors.white,
                                 strokeWidth: 2,
                               ))
-                          : const Icon(Icons.save_outlined,
-                              size: 20),
+                          : const Icon(Icons.save_outlined, size: 20),
                       label: Text(
                         isSubmitting
                             ? 'Enregistrement...'
                             : 'Enregistrer la consultation',
                         style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600),
+                            fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color(0xFF00897B),
+                        backgroundColor: const Color(0xFF00897B),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(14)),
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: isSubmitting
                           ? null
                           : () async {
-                              // Validation
                               if (patientId == null) {
-                                ScaffoldMessenger.of(ctx)
-                                    .showSnackBar(const SnackBar(
-                                  content: Text(
-                                      'Sélectionnez un patient'),
-                                  backgroundColor: AppColors.error,
-                                ));
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Sélectionnez un patient'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
                                 return;
                               }
                               if (motifCtrl.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(ctx)
-                                    .showSnackBar(const SnackBar(
-                                  content:
-                                      Text('Motif requis'),
-                                  backgroundColor: AppColors.error,
-                                ));
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Motif requis'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
                                 return;
                               }
                               if (dateCtrl.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(ctx)
-                                    .showSnackBar(const SnackBar(
-                                  content: Text('Date requise'),
-                                  backgroundColor: AppColors.error,
-                                ));
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Date requise'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
                                 return;
                               }
 
-                              setStateModal(
-                                  () => isSubmitting = true);
+                              setStateModal(() => isSubmitting = true);
 
                               try {
-                                // Convertir date JJ/MM/AAAA → AAAA-MM-JJ
-                                String dateFormatee =
-                                    dateCtrl.text.trim();
+                                // Convertir JJ/MM/AAAA → AAAA-MM-JJ
+                                String dateFormatee = dateCtrl.text.trim();
                                 if (dateFormatee.contains('/')) {
-                                  final p =
-                                      dateFormatee.split('/');
+                                  final p = dateFormatee.split('/');
                                   if (p.length == 3) {
                                     dateFormatee =
                                         '${p[2]}-${p[1].padLeft(2,'0')}-${p[0].padLeft(2,'0')}';
@@ -297,21 +268,18 @@ class _MesConsultationsScreenState
                                 final body = {
                                   'patient_id': patientId,
                                   'motif': motifCtrl.text.trim(),
-                                  'diagnostic':
-                                      diagCtrl.text.trim(),
-                                  'traitement':
-                                      traitCtrl.text.trim(),
+                                  'diagnostic': diagCtrl.text.trim(),
+                                  'traitement': traitCtrl.text.trim(),
                                   'notes': notesCtrl.text.trim(),
-                                  'date_consultation':
-                                      dateFormatee,
+                                  'date_consultation': dateFormatee,
                                 };
 
-                                debugPrint(
-                                    'Envoi consultation: $body');
+                                debugPrint('Envoi consultation: $body');
 
+                                // ✅ CORRECTION : /medecins/ → /medecin/
                                 final response = await http.post(
                                   Uri.parse(
-                                      '${AppConstants.baseUrl}/medecins/consultations'),
+                                      '${AppConstants.baseUrl}/medecin/consultations'),
                                   headers: await _headers(),
                                   body: jsonEncode(body),
                                 );
@@ -319,19 +287,16 @@ class _MesConsultationsScreenState
                                 debugPrint(
                                     'Réponse: ${response.statusCode} — ${response.body}');
 
-                                final data =
-                                    jsonDecode(response.body);
+                                final data = jsonDecode(response.body);
 
                                 if (context.mounted) {
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context)
                                       .showSnackBar(SnackBar(
-                                    content: Text(
-                                        data['message'] ?? ''),
-                                    backgroundColor:
-                                        data['succes'] == true
-                                            ? AppColors.success
-                                            : AppColors.error,
+                                    content: Text(data['message'] ?? ''),
+                                    backgroundColor: data['succes'] == true
+                                        ? AppColors.success
+                                        : AppColors.error,
                                   ));
                                   if (data['succes'] == true) {
                                     _charger();
@@ -339,15 +304,12 @@ class _MesConsultationsScreenState
                                 }
                               } catch (e) {
                                 debugPrint('Erreur: $e');
-                                setStateModal(
-                                    () => isSubmitting = false);
+                                setStateModal(() => isSubmitting = false);
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context)
                                       .showSnackBar(SnackBar(
-                                    content: Text(
-                                        'Erreur réseau: $e'),
-                                    backgroundColor:
-                                        AppColors.error,
+                                    content: Text('Erreur réseau: $e'),
+                                    backgroundColor: AppColors.error,
                                   ));
                                 }
                               }
@@ -363,7 +325,6 @@ class _MesConsultationsScreenState
       ),
     );
 
-    // Nettoyer après fermeture
     motifCtrl.dispose();
     diagCtrl.dispose();
     traitCtrl.dispose();
@@ -419,15 +380,12 @@ class _MesConsultationsScreenState
                       ElevatedButton.icon(
                         onPressed: _ajouterConsultation,
                         icon: const Icon(Icons.add),
-                        label: const Text(
-                            'Ajouter une consultation'),
+                        label: const Text('Ajouter une consultation'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xFF00897B),
+                          backgroundColor: const Color(0xFF00897B),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ],
@@ -457,14 +415,12 @@ class _MesConsultationsScreenState
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black
-                                    .withOpacity(0.05),
+                                color: Colors.black.withOpacity(0.05),
                                 blurRadius: 8),
                           ],
                         ),
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(children: [
                               Container(
@@ -472,59 +428,44 @@ class _MesConsultationsScreenState
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF00897B)
                                       .withOpacity(0.1),
-                                  borderRadius:
-                                      BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Icon(
-                                    Icons
-                                        .medical_services_outlined,
+                                    Icons.medical_services_outlined,
                                     color: Color(0xFF00897B),
                                     size: 22),
                               ),
                               const SizedBox(width: 12),
                               Expanded(child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     c['motif']?.toString() ?? '',
                                     style: const TextStyle(
                                         fontSize: 14,
-                                        fontWeight:
-                                            FontWeight.w600,
-                                        color: AppColors
-                                            .textPrimary),
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary),
                                   ),
                                   Text(
                                     '${c['patient_prenom'] ?? ''} ${c['patient_nom'] ?? ''}'
                                         .trim(),
                                     style: const TextStyle(
                                         fontSize: 12,
-                                        color: AppColors
-                                            .textSecondary),
+                                        color: AppColors.textSecondary),
                                   ),
                                 ],
                               )),
                               Text(dateAffichee,
                                   style: const TextStyle(
                                       fontSize: 11,
-                                      color: AppColors
-                                          .textSecondary)),
+                                      color: AppColors.textSecondary)),
                             ]),
-                            if ((c['diagnostic']
-                                        ?.toString()
-                                        .isNotEmpty ??
-                                    false)) ...[
+                            if ((c['diagnostic']?.toString().isNotEmpty ?? false)) ...[
                               const Divider(height: 14),
-                              _infoRow('Diagnostic',
-                                  c['diagnostic'].toString()),
+                              _infoRow('Diagnostic', c['diagnostic'].toString()),
                             ],
-                            if ((c['traitement']
-                                        ?.toString()
-                                        .isNotEmpty ??
-                                    false))
-                              _infoRow('Traitement',
-                                  c['traitement'].toString()),
+                            if ((c['traitement']?.toString().isNotEmpty ?? false))
+                              _infoRow('Traitement', c['traitement'].toString()),
                           ],
                         ),
                       );
@@ -542,8 +483,7 @@ class _MesConsultationsScreenState
           width: 90,
           child: Text(label,
               style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary)),
+                  fontSize: 12, color: AppColors.textSecondary)),
         ),
         Expanded(
           child: Text(value,

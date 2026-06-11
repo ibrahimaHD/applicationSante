@@ -9,9 +9,8 @@ import '../medecin/mes_patients_screen.dart';
 import '../medecin/ajouter_consultation_screen.dart';
 import '../medecin/creer_ordonnance_screen.dart';
 import '../medecin/mes_consultations_screen.dart';
-//import '../medecin/scanner_qr_screen.dart';
+import '../medecin/scanner_qr_screen.dart';
 import '../medecin/mes_rdv_medecin_screen.dart';
-
 
 class MedecinDashboard extends StatefulWidget {
   final UserModel user;
@@ -125,13 +124,18 @@ class _MedecinDashboardState extends State<MedecinDashboard> {
                   builder: (_) => MesPatientsScreen(user: widget.user))),
         ),
         const SizedBox(height: 10),
+
         QuickActionCard(
           title: 'Scanner QR patient',
           subtitle: 'Accéder au dossier via QR code',
           icon: Icons.qr_code_scanner_outlined,
           color: const Color(0xFF3949AB),
-          //  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ScannerQrScreen(user: widget.user))),
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ScannerQrScreen(user: widget.user))),
         ),
+
         const SizedBox(height: 24),
         const Text('Actes médicaux', style: AppTextStyles.heading2),
         const SizedBox(height: 12),
@@ -140,7 +144,7 @@ class _MedecinDashboardState extends State<MedecinDashboard> {
           subtitle: 'Diagnostic, traitement, notes',
           icon: Icons.medical_services_outlined,
           color: const Color(0xFF00897B),
-        //   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AjouterConsultationScreen(user: widget.user))),
+          //   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AjouterConsultationScreen(user: widget.user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(

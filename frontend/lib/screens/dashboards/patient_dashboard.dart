@@ -16,6 +16,7 @@ import '../patient/resultats_medicaux_screen.dart';
 import '../patient/audit_acces_screen.dart';
 import '../patient/cartographie_screen.dart';
 import '../patient/pharmacie_screen.dart';
+import '../patient/qr_code_screen.dart';
 
 class PatientDashboard extends StatefulWidget {
   final UserModel user;
@@ -123,6 +124,16 @@ class _PatientDashboardState extends State<PatientDashboard> {
               context,
               MaterialPageRoute(
                   builder: (_) => ProfilMedicalScreen(user: _user))),
+        ),
+
+// Ajouter dans la section "Mon Profil" :
+        QuickActionCard(
+          title: 'Mon QR Code',
+          subtitle: 'Accès rapide à mon dossier',
+          icon: Icons.qr_code_2_outlined,
+          color: const Color(0xFF3949AB),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => QrCodeScreen(user: _user))),
         ),
 
         const SizedBox(height: 24),

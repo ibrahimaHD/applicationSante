@@ -192,26 +192,76 @@ const getSuiviLivraison = async (req, res) => {
 };
 
 // ── PAIEMENT ────────────────────────────────────────────
+
+const { orangeMoneyPayer, moovMoneyPayer } = require('../services/mobileMoney');
+
 const initierPaiement = async (req, res) => {
   try {
-    const { commande_id, numero_mobile } = req.body;
+    const { commande_id, numero_mobile, operateur } = req.body;
+
     const [commande] = await db.query(
       'SELECT * FROM commandes WHERE id = ? AND patient_id = ?',
       [commande_id, req.utilisateur.id]
     );
-    if (commande.length === 0) return res.status(404).json({ succes: false, message: 'Commande introuvable.' });
 
-    // Simulation paiement mobile (Orange Money, Moov Money)
-    await db.query('UPDATE commandes SET statut_paiement = ? WHERE id = ?', ['paye', commande_id]);
-    await db.query('UPDATE commandes SET statut = ? WHERE id = ?', ['confirmee', commande_id]);
+    if (commande.length === 0) {
+      return res.status(404).json({
+        succes: false,
+        message: 'Commande introuvable.'
+      });
+    }
+
+    const reference = `LAAFIBA-${commande_id}-${Date.now()}`;
+    let resultat;
+
+    // Choisir l'opérateur
+    if (operateur === 'orange') {
+      resultat = await orangeMoneyPayer({
+        montant:     commande[0].montant_total,
+        numero:      numero_mobile,
+        reference,
+        description: `Commande LaafiBa #${commande_id}`,
+      });
+    } else if (operateur === 'moov') {
+      resultat = await moovMoneyPayer({
+        montant:   commande[0].montant_total,
+        numero:    numero_mobile,
+        reference,
+      });
+    } else {
+      // Simulation pour tests
+      resultat = { succes: true, data: { transaction_id: reference } };
+    }
+
+    if (!resultat.succes) {
+      return res.status(400).json({
+        succes: false,
+        message: 'Échec du paiement: ' + resultat.message
+      });
+    }
+
+    // Enregistrer la transaction
     await db.query(
-      'INSERT INTO suivi_livraison (commande_id, statut, description) VALUES (?, ?, ?)',
-      [commande_id, 'Paiement confirmé', `Paiement de ${commande[0].montant_total} FCFA reçu via ${numero_mobile}`]
+      `INSERT INTO transactions_paiement 
+        (commande_id, reference, operateur, montant, statut)
+       VALUES (?, ?, ?, ?, ?)`,
+      [commande_id, reference, operateur || 'simulation',
+       commande[0].montant_total, 'en_attente']
     );
 
-    res.json({ succes: true, message: 'Paiement effectué avec succès !' });
+    res.json({
+      succes: true,
+      message: 'Paiement initié !',
+      reference,
+      redirect_url: resultat.data?.payment_url || null,
+    });
+
   } catch (error) {
-    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+    console.error('Erreur paiement:', error);
+    res.status(500).json({
+      succes: false,
+      message: 'Erreur serveur.'
+    });
   }
 };
 

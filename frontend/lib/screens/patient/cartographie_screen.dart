@@ -6,6 +6,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import '../../services/routing_service.dart';
+
+
 
 class CartographieScreen extends StatefulWidget {
   final UserModel user;
@@ -20,6 +25,75 @@ class _CartographieScreenState extends State<CartographieScreen>
   late TabController _tabController;
   final MapController _mapController = MapController();
 
+
+
+// Ajouter dans _CartographieScreenState :
+List<LatLng> _itineraire = [];
+bool _chargementItineraire = false;
+
+Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
+  if (destination['latitude'] == null) return;
+
+  setState(() => _chargementItineraire = true);
+
+  // Position actuelle simulée — Bobo-Dioulasso centre
+  // En production : utiliser geolocator pour la vraie position
+  const userLat = 11.1771;
+  const userLng = -4.2979;
+
+  final destLat =
+      double.parse(destination['latitude'].toString());
+  final destLng =
+      double.parse(destination['longitude'].toString());
+
+  final points = await RoutingService.getItineraire(
+    startLat: userLat,
+    startLng: userLng,
+    endLat: destLat,
+    endLng: destLng,
+  );
+
+  final distance = RoutingService.calculerDistance(
+      userLat, userLng, destLat, destLng);
+
+  setState(() {
+    _itineraire = points != null
+        ? points.map((p) => LatLng(p[0], p[1])).toList()
+        : [
+            const LatLng(userLat, userLng),
+            LatLng(destLat, destLng),
+          ];
+    _chargementItineraire = false;
+  });
+
+  _mapController.move(
+      LatLng(
+          (userLat + destLat) / 2,
+          (userLng + destLng) / 2),
+      13);
+
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          'Distance estimée : ${distance.toStringAsFixed(1)} km'),
+      backgroundColor: const Color(0xFF1E88E5),
+    ));
+  }
+}
+
+// Dans la méthode build, ajouter PolylineLayer dans FlutterMap :
+// children: [
+//   TileLayer(...),
+//   if (_itineraire.isNotEmpty)
+//     PolylineLayer(polylines: [
+//       Polyline(
+//         points: _itineraire,
+//         strokeWidth: 4,
+//         color: const Color(0xFF1E88E5),
+//       ),
+//     ]),
+//   MarkerLayer(markers: _buildMarkers()),
+// ],
   // Centre de Bobo-Dioulasso
   static const LatLng _bobo = LatLng(11.1771, -4.2979);
 

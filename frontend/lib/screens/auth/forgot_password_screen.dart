@@ -49,8 +49,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     setState(() => _isLoading = true);
 
     try {
+      // ✅ CORRECTION : body JSON avec l'email envoyé correctement
       final response = await http.post(
-          Uri.parse('http://localhost:3000/api/auth/mot-de-passe-oublie'));
+        Uri.parse('${AppConstants.baseUrl}/auth/mot-de-passe-oublie'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': _emailController.text.trim()}),
+      );
       final data = jsonDecode(response.body);
 
       if (!mounted) return;
@@ -103,8 +107,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           child: Column(
             children: [
               const SizedBox(height: 20),
-
-              // ── Icône ───────────────────────────────────────────────────
               Container(
                 width: 80,
                 height: 80,
@@ -131,10 +133,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                   size: 40,
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // ── Contenu selon l'état ────────────────────────────────────
               _emailEnvoye ? _buildSuccessState() : _buildFormState(),
             ],
           ),
@@ -143,7 +142,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     );
   }
 
-  // ── Formulaire ─────────────────────────────────────────────────────────────
   Widget _buildFormState() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -207,7 +205,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     );
   }
 
-  // ── Succès ─────────────────────────────────────────────────────────────────
   Widget _buildSuccessState() {
     return Container(
       padding: const EdgeInsets.all(24),

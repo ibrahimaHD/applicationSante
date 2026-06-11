@@ -36,7 +36,11 @@ app.use('/api/pharmacie', require('./routes/pharmacie_routes'));
 app.use('/api/medecin', require('./routes/medecin'));
 
 
- 
+// Servir les uploads
+app.use('/uploads', express.static('uploads'));
+
+// Ajouter la route livraison
+app.use('/api/livraison', require('./routes/livraison'));
 // ── Flutter web (APRÈS les routes API) ────────────────
 app.use(express.static(path.join(__dirname, '../frontend/build/web')));
  
@@ -44,6 +48,7 @@ app.use(express.static(path.join(__dirname, '../frontend/build/web')));
 app.use((req, res) => {
   res.status(404).json({ succes: false, message: 'Route introuvable.' });
 });
+
 
 
 

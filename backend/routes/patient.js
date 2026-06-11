@@ -13,7 +13,66 @@ const {
 } = require('../controllers/patientController');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
 const { getResultats, ajouterResultat, supprimerResultat, getAudits } = require('../controllers/resultatsController');
- 
+ const multer = require('multer');
+const path   = require('path');
+const fs     = require('fs');
+
+// Config multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/ordonnances';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `ord_${req.utilisateur.id}_${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
+
+// Ajouter dans patient.js
+router.post('/ordonnances/upload',
+  upload.single('ordonnance'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          succes: false,
+          message: 'Fichier requis (JPG, PNG ou PDF, max 5MB).'
+        });
+      }
+
+      const { notes } = req.body;
+
+      // Sauvegarder en base
+      await db.query(
+        `INSERT INTO ordonnances_uploadees 
+          (patient_id, fichier_path, notes, statut)
+         VALUES (?, ?, ?, 'en_attente')`,
+        [req.utilisateur.id, req.file.path, notes || null]
+      );
+
+      res.json({
+        succes: true,
+        message: 'Ordonnance envoyée ! La pharmacie va la traiter sous 30 min.',
+        fichier: req.file.filename,
+      });
+    } catch (error) {
+      res.status(500).json({
+        succes: false,
+        message: 'Erreur: ' + error.message
+      });
+    }
+  }
+);
 // Tous les endpoints nécessitent d'être connecté
 router.use(verifierToken);
 router.use(autoriserRoles('patient', 'admin', 'superadmin'));

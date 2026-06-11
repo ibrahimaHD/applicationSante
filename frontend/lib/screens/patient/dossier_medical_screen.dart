@@ -68,38 +68,41 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
     }
   }
 
-  Future<void> _exporterPdf() async {
-    if (_exportEnCours) return;
+  
 
-    if (_dossier.isEmpty) {
-      _showSnack('Chargement du dossier en cours, veuillez patienter...', Colors.orange);
-      await _charger();
-      if (_dossier.isEmpty) {
-        _showSnack('Impossible de récupérer le dossier médical.', AppColors.error);
-        return;
-      }
-    }
+// Remplacer la méthode _exporterPdf par :
+Future<void> _exporterPdf() async {
+  if (_isLoading) return;
 
-    setState(() => _exportEnCours = true);
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const AlertDialog(
+      content: Row(children: [
+        CircularProgressIndicator(),
+        SizedBox(width: 16),
+        Text('Génération du PDF...'),
+      ]),
+    ),
+  );
 
-    try {
-      final patient = _dossier['patient'] ?? {};
-      final nomPatient =
-          '${patient['prenom'] ?? widget.user.prenom} ${patient['nom'] ?? widget.user.nom}';
-
-      await PdfService.exporterDossierMedical(
-        context: context,
-        dossier: _dossier,
-        nomPatient: nomPatient,
-      );
-    } catch (e) {
-      if (mounted) {
-        _showSnack('Erreur lors de la génération du PDF : $e', AppColors.error);
-      }
-    } finally {
-      if (mounted) setState(() => _exportEnCours = false);
+  try {
+    await PdfService.exporterDossierMedical(
+      context: context,
+      user: widget.user,
+      dossier: _dossier,
+    );
+    if (mounted) Navigator.pop(context);
+  } catch (e) {
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur PDF: $e'),
+        backgroundColor: AppColors.error,
+      ));
     }
   }
+}
 
   void _showSnack(String message, Color color) {
     if (!mounted) return;
