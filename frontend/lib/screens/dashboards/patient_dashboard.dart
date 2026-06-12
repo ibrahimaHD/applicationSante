@@ -126,7 +126,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                   builder: (_) => ProfilMedicalScreen(user: _user))),
         ),
 
-// Ajouter dans la section "Mon Profil" :
+        const SizedBox(height: 10),
         QuickActionCard(
           title: 'Mon QR Code',
           subtitle: 'Accès rapide à mon dossier',

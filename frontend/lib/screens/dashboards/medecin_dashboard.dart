@@ -144,7 +144,7 @@ class _MedecinDashboardState extends State<MedecinDashboard> {
           subtitle: 'Diagnostic, traitement, notes',
           icon: Icons.medical_services_outlined,
           color: const Color(0xFF00897B),
-          //   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AjouterConsultationScreen(user: widget.user))),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MesConsultationsScreen(user: widget.user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(
