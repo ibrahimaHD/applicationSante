@@ -6,7 +6,7 @@ import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import 'base_dashboard.dart';
 import '../medecin/mes_patients_screen.dart';
-import '../medecin/ajouter_consultation_screen.dart';
+import '../medecin/examen_medecin_screen.dart';
 import '../medecin/creer_ordonnance_screen.dart';
 import '../medecin/mes_consultations_screen.dart';
 import '../medecin/scanner_qr_screen.dart';
@@ -140,11 +140,11 @@ class _MedecinDashboardState extends State<MedecinDashboard> {
         const Text('Actes médicaux', style: AppTextStyles.heading2),
         const SizedBox(height: 12),
         QuickActionCard(
-          title: 'Ajouter une consultation',
-          subtitle: 'Diagnostic, traitement, notes',
+          title: 'Ajouter les resultats medicaux',
+          subtitle: 'Analyses, imageries, notes',
           icon: Icons.medical_services_outlined,
           color: const Color(0xFF00897B),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MesConsultationsScreen(user: widget.user))),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) =>ExamensMedecinScreen(user: widget.user))),
         ),
         const SizedBox(height: 10),
         QuickActionCard(

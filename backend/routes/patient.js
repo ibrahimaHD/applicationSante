@@ -12,7 +12,7 @@ const {
   getDossierMedical, getExamens, ajouterExamen, getOrdonnances,
 } = require('../controllers/patientController');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
-const { getResultats, ajouterResultat, supprimerResultat, getAudits } = require('../controllers/resultatsController');
+const { getResultats, supprimerResultat, getAudits } = require('../controllers/resultatsController');
  const multer = require('multer');
 const path   = require('path');
 const fs     = require('fs');
@@ -123,7 +123,6 @@ router.put('/infos-personnelles', majInfosPersonnelles);
  
 
 router.get('/resultats', getResultats);
-router.post('/resultats', ajouterResultat);
 router.delete('/resultats/:id', supprimerResultat);
 router.get('/audits', getAudits);
 module.exports = router;
