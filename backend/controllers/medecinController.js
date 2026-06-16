@@ -21,6 +21,7 @@ const getMonProfil = async (req, res) => {
 const getStats = async (req, res) => {
   try {
     const medecinId = req.utilisateur.id;
+    
 
     const [rdvAujourdhui] = await db.query(
       `SELECT COUNT(*) AS total FROM rendez_vous 
@@ -328,7 +329,7 @@ const genererQrCode = async (req, res) => {
       expire_at: expiration,
     });
   } catch (error) {
-    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+    res.status(500).json({ succes: false, message: 'Erreur serveur.'});
   }
 };
 

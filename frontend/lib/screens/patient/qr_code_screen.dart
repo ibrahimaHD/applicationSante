@@ -8,12 +8,21 @@ class QrCodeScreen extends StatelessWidget {
   final UserModel user;
   const QrCodeScreen({super.key, required this.user});
 
+  // Génère un numéro de matricule unique basé sur l'id et le rôle
+  String get _matricule {
+    final id = user.id ?? 0;
+    final annee = DateTime.now().year;
+    // Format : LB-PATIENT-2026-00042
+    final idPadded = id.toString().padLeft(5, '0');
+    return 'LB-${user.role.toUpperCase()}-$annee-$idPadded';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Données encodées dans le QR
     final qrData = jsonEncode({
-      'patient_id': user.id,
+      'matricule': _matricule,
       'nom': user.fullName,
+      'role': user.role,
       'app': 'LaafiBa',
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
@@ -28,8 +37,7 @@ class QrCodeScreen extends StatelessWidget {
                 fontSize: 16,
                 fontWeight: FontWeight.w600)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -42,18 +50,15 @@ class QrCodeScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF1E88E5).withOpacity(0.08),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: const Color(0xFF1E88E5).withOpacity(0.2)),
+              border: Border.all(color: const Color(0xFF1E88E5).withOpacity(0.2)),
             ),
             child: const Row(children: [
-              Icon(Icons.info_outline,
-                  color: Color(0xFF1E88E5), size: 20),
+              Icon(Icons.info_outline, color: Color(0xFF1E88E5), size: 20),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Montrez ce QR Code à votre médecin pour qu\'il accède rapidement à votre dossier médical.',
-                  style: TextStyle(
-                      fontSize: 13, color: Color(0xFF1E88E5)),
+                  'Montrez ce QR Code à votre médecin pour accéder rapidement à votre dossier médical.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF1E88E5)),
                 ),
               ),
             ]),
@@ -61,7 +66,7 @@ class QrCodeScreen extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          // QR Code
+          // QR Code card
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -87,7 +92,7 @@ class QrCodeScreen extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    '${user.prenom[0]}${user.nom[0]}',
+                    '${user.prenom.isNotEmpty ? user.prenom[0] : ""}${user.nom.isNotEmpty ? user.nom[0] : ""}',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
@@ -105,12 +110,35 @@ class QrCodeScreen extends StatelessWidget {
                       color: AppColors.textPrimary)),
               Text('Patient LaafiBa',
                   style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary)),
+                      fontSize: 12, color: AppColors.textSecondary)),
+
+              const SizedBox(height: 8),
+
+              // Numéro de matricule affiché
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E88E5).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF1E88E5).withOpacity(0.2)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.badge_outlined, size: 14, color: Color(0xFF1E88E5)),
+                  const SizedBox(width: 6),
+                  Text(
+                    _matricule,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1E88E5),
+                        letterSpacing: 1),
+                  ),
+                ]),
+              ),
 
               const SizedBox(height: 20),
 
-              // QR
+              // QR Code
               QrImageView(
                 data: qrData,
                 version: QrVersions.auto,
@@ -126,24 +154,14 @@ class QrCodeScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              // ID patient
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.inputFill,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'ID : ${user.id ?? 'N/A'}',
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                      letterSpacing: 1),
-                ),
+              // Info matricule
+              Text(
+                'Ce code contient votre matricule unique',
+                style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary),
               ),
             ]),
           ),
@@ -156,18 +174,15 @@ class QrCodeScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: Colors.orange.withOpacity(0.2)),
+              border: Border.all(color: Colors.orange.withOpacity(0.2)),
             ),
             child: const Row(children: [
-              Icon(Icons.security_outlined,
-                  color: Colors.orange, size: 18),
+              Icon(Icons.security_outlined, color: Colors.orange, size: 18),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Ne partagez ce QR Code qu\'avec des professionnels de santé de confiance.',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.orange),
+                  style: TextStyle(fontSize: 12, color: Colors.orange),
                 ),
               ),
             ]),
