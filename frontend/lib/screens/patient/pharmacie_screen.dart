@@ -442,7 +442,7 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                                 ),
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                   Container(
-                                    height: 70,
+                                    height: 20,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF8E24AA).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(12),
@@ -485,10 +485,10 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                   onRefresh: _charger,
                   child: _commandes.isEmpty
                       ? ListView(children: const [
-                          SizedBox(height: 100),
+                          SizedBox(height: 10),
                           Center(child: Column(children: [
-                            Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey),
-                            SizedBox(height: 16),
+                            Icon(Icons.shopping_bag_outlined, size: 4, color: Colors.grey),
+                            SizedBox(height: 5),
                             Text('Aucune commande', style: TextStyle(color: AppColors.textSecondary, fontSize: 16)),
                           ])),
                         ])

@@ -77,7 +77,7 @@ class _ResultatsMedecinScreenState extends State<ResultatsMedecinScreen> {
     try {
       final headers = await _headers();
       final r = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/medecin/patients/tous'),
+        Uri.parse('${AppConstants.baseUrl}/medecin/patients'),
         headers: headers,
       );
       if (r.statusCode == 200) {

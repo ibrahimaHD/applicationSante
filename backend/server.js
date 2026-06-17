@@ -24,7 +24,7 @@ app.use('/api/patient',      require('./routes/patient'));
 app.use('/api/rendez-vous',  require('./routes/rendezVous'));
 app.use('/api/cartographie', require('./routes/cartographie_routes'));
 app.use('/api/pharmacie',    require('./routes/pharmacien_routes'));   // côté patient
-app.use('/api/medecins',     require('./routes/medecin'));
+app.use('/api/medecin',     require('./routes/medecin'));
 app.use('/api/pharmacien',   require('./routes/pharmacien_routes')); // ← nouveau
 app.use('/api/livreur',      require('./routes/livreur_routes'));     // ← nouveau
 

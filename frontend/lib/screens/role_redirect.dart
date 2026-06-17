@@ -29,7 +29,7 @@ class RoleRedirectScreen extends StatelessWidget {
       case UserRole.livreur:
         return LivreurDashboard(user: user);
       case UserRole.adminJds:
-        //return AdminDashboard(user: user);
+        return AdminDashboard(user: user);
       case UserRole.superAdmin:
        // return SuperAdminDashboard(user: user);
       default:

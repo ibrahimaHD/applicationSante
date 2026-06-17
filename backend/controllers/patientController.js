@@ -117,8 +117,7 @@ const supprimerConsultation = async (req, res) => {
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });
   }
 };
- 
-// ─────────────────────────────────────────
+// ────────────────────────────────────────
 // VACCINATIONS
 // ─────────────────────────────────────────
  
