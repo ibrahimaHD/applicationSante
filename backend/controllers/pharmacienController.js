@@ -366,6 +366,7 @@ const traiterOrdonnance = async (req, res) => {
   }
 };
 
+
 // ── VENTES / STATISTIQUES ────────────────────────────────────────────
 const getVentes = async (req, res) => {
   try {
