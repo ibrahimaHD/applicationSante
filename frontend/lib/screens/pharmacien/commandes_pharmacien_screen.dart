@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
-import '../../widgets/app_widgets.dart';
 
 class CommandesPharmacienScreen extends StatefulWidget {
   final UserModel user;

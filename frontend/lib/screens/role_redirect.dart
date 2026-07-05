@@ -6,7 +6,6 @@ import 'dashboards/medecin_dashboard.dart';
 import 'dashboards/pharmacien_dashboard.dart';
 import 'dashboards/livreur_dashboard.dart';
 import 'dashboards/admin_dashboard.dart';
-import 'dashboards/super_admin_dashboard.dart';
 
 class RoleRedirectScreen extends StatelessWidget {
   final UserModel user;
