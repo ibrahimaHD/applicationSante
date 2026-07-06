@@ -19,10 +19,12 @@ class _PharmacieScreenState extends State<PharmacieScreen>
   late TabController _tabController;
   List<dynamic> _medicaments = [];
   List<dynamic> _commandes = [];
+  List<dynamic> _pharmacies = [];
   List<String> _categories = [];
   List<Map<String, dynamic>> _panier = [];
   bool _isLoading = true;
   String? _filtreCategorie;
+  int? _filtrePharmacieId;
   String _recherche = '';
   final _searchController = TextEditingController();
 
@@ -50,6 +52,11 @@ class _PharmacieScreenState extends State<PharmacieScreen>
     return {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
   }
 
+  double _prix(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
   Future<void> _charger() async {
     setState(() => _isLoading = true);
     try {
@@ -57,16 +64,19 @@ class _PharmacieScreenState extends State<PharmacieScreen>
       String url = '${AppConstants.baseUrl}/pharmacie/medicaments';
       if (_filtreCategorie != null) url += '?categorie=$_filtreCategorie';
       if (_recherche.isNotEmpty) url += url.contains('?') ? '&search=$_recherche' : '?search=$_recherche';
+      if (_filtrePharmacieId != null) url += url.contains('?') ? '&pharmacie_id=$_filtrePharmacieId' : '?pharmacie_id=$_filtrePharmacieId';
 
       final results = await Future.wait([
         http.get(Uri.parse(url), headers: headers),
         http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/medicaments/categories'), headers: headers),
         http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/commandes'), headers: headers),
+        http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/pharmacies'), headers: headers),
       ]);
 
       if (results[0].statusCode == 200) setState(() => _medicaments = jsonDecode(results[0].body)['medicaments'] ?? []);
       if (results[1].statusCode == 200) setState(() => _categories = List<String>.from(jsonDecode(results[1].body)['categories'] ?? []));
       if (results[2].statusCode == 200) setState(() => _commandes = jsonDecode(results[2].body)['commandes'] ?? []);
+      if (results[3].statusCode == 200) setState(() => _pharmacies = jsonDecode(results[3].body)['pharmacies'] ?? []);
     } catch (e) {
       debugPrint('Erreur: $e');
     }
@@ -74,14 +84,25 @@ class _PharmacieScreenState extends State<PharmacieScreen>
   }
 
   void _ajouterAuPanier(Map<String, dynamic> medicament) {
+    final pharmacieId = medicament['pharmacie_id'];
+    if (_panier.isNotEmpty && _panier.first['pharmacie_id'] != pharmacieId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Veuillez commander dans une seule pharmacie à la fois.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
     final index = _panier.indexWhere((p) => p['medicament_id'] == medicament['id']);
     if (index >= 0) {
       setState(() => _panier[index]['quantite']++);
     } else {
       setState(() => _panier.add({
         'medicament_id': medicament['id'],
+        'pharmacie_id': pharmacieId,
+        'pharmacie_nom': medicament['pharmacie_nom'],
         'nom': medicament['nom'],
-        'prix': medicament['prix'],
+        'prix': _prix(medicament['prix']),
         'quantite': 1,
         'ordonnance_requise': medicament['ordonnance_requise'],
       }));
@@ -93,13 +114,42 @@ class _PharmacieScreenState extends State<PharmacieScreen>
     ));
   }
 
-  double get _totalPanier => _panier.fold(0, (sum, p) => sum + (p['prix'] * p['quantite']));
+  double get _totalPanier => _panier.fold(0, (sum, p) => sum + (_prix(p['prix']) * (p['quantite'] as int)));
+
+  Widget _operatorChoice(String label, String value, String selected, ValueChanged<String> onChanged) {
+    final isSelected = value == selected;
+    return GestureDetector(
+      onTap: () => onChanged(value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF8E24AA).withOpacity(0.08) : Colors.white,
+          border: Border.all(
+            color: isSelected ? const Color(0xFF8E24AA) : AppColors.divider,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? const Color(0xFF8E24AA) : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _passerCommande() async {
     if (_panier.isEmpty) return;
 
     final adresseController = TextEditingController();
     String modePaiement = 'mobile_money';
+    String operateurPaiement = 'orange_money';
     final numeroController = TextEditingController();
 
     await showModalBottomSheet(
@@ -129,7 +179,7 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                 child: Column(children: [
                   ..._panier.map((p) => Row(children: [
                     Expanded(child: Text('${p['nom']} x${p['quantite']}', style: const TextStyle(fontSize: 13))),
-                    Text('${(p['prix'] * p['quantite']).toStringAsFixed(0)} FCFA',
+                    Text('${(_prix(p['prix']) * (p['quantite'] as int)).toStringAsFixed(0)} FCFA',
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   ])),
                   const Divider(),
@@ -183,6 +233,16 @@ class _PharmacieScreenState extends State<PharmacieScreen>
 
               if (modePaiement == 'mobile_money') ...[
                 const SizedBox(height: 12),
+                const Align(alignment: Alignment.centerLeft, child: Text('Opérateur', style: AppTextStyles.label)),
+                const SizedBox(height: 6),
+                Row(children: [
+                  Expanded(child: _operatorChoice('Orange', 'orange_money', operateurPaiement, (v) => setStateModal(() => operateurPaiement = v))),
+                  const SizedBox(width: 6),
+                  Expanded(child: _operatorChoice('Moov', 'moov_money', operateurPaiement, (v) => setStateModal(() => operateurPaiement = v))),
+                  const SizedBox(width: 6),
+                  Expanded(child: _operatorChoice('Coris', 'coris_money', operateurPaiement, (v) => setStateModal(() => operateurPaiement = v))),
+                ]),
+                const SizedBox(height: 12),
                 AppTextField(label: 'Numéro Mobile Money', hint: '+226 XX XX XX XX', prefixIcon: Icons.phone_outlined, controller: numeroController, keyboardType: TextInputType.phone),
               ],
 
@@ -224,6 +284,7 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                           body: jsonEncode({
                             'commande_id': data['commande_id'],
                             'numero_mobile': numeroController.text,
+                            'operateur': operateurPaiement,
                           }),
                         );
                       }
@@ -393,6 +454,43 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // Filtres pharmacies partenaires
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            {'id': null, 'nom': 'Toutes les pharmacies'},
+                            ..._pharmacies,
+                          ].map((p) {
+                            final id = p['id'];
+                            final selected = id == null ? _filtrePharmacieId == null : _filtrePharmacieId == id;
+                            return GestureDetector(
+                              onTap: () => setState(() {
+                                _filtrePharmacieId = id as int?;
+                                _charger();
+                              }),
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: selected ? AppColors.primary : Colors.white,
+                                  border: Border.all(color: selected ? AppColors.primary : AppColors.divider),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(Icons.local_pharmacy_outlined, size: 14, color: selected ? Colors.white : AppColors.textSecondary),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    p['nom']?.toString() ?? '',
+                                    style: TextStyle(fontSize: 12, color: selected ? Colors.white : AppColors.textSecondary),
+                                  ),
+                                ]),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       // Filtres catégories
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -427,7 +525,7 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                         : GridView.builder(
                             padding: const EdgeInsets.all(16),
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2, childAspectRatio: 0.8, crossAxisSpacing: 12, mainAxisSpacing: 12,
+                              crossAxisCount: 2, childAspectRatio: 0.66, crossAxisSpacing: 12, mainAxisSpacing: 12,
                             ),
                             itemCount: _medicaments.length,
                             itemBuilder: (context, index) {
@@ -442,7 +540,7 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                                 ),
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                   Container(
-                                    height: 20,
+                                    height: 42,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF8E24AA).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(12),
@@ -453,6 +551,26 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                                   Text(m['nom'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), maxLines: 2, overflow: TextOverflow.ellipsis),
                                   const SizedBox(height: 4),
                                   Text(m['categorie'] ?? '', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                  const SizedBox(height: 4),
+                                  Row(children: [
+                                    const Icon(Icons.local_pharmacy_outlined, size: 12, color: AppColors.textSecondary),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        m['pharmacie_nom'] ?? 'Pharmacie partenaire',
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ]),
+                                  if ((m['pharmacie_quartier'] ?? '').toString().isNotEmpty)
+                                    Text(
+                                      m['pharmacie_quartier'].toString(),
+                                      style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   if (ordonnance)
                                     Container(
                                       margin: const EdgeInsets.only(top: 4),
@@ -617,6 +735,13 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                                   const SizedBox(width: 12),
                                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Text(p['nom'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                    if ((p['pharmacie_nom'] ?? '').toString().isNotEmpty)
+                                      Text(
+                                        p['pharmacie_nom'],
+                                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     Text('${p['prix']} FCFA / unité', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                   ])),
                                   Row(children: [

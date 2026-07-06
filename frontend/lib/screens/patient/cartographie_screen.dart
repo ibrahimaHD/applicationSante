@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import '../../services/routing_service.dart';
@@ -28,16 +29,40 @@ class _CartographieScreenState extends State<CartographieScreen>
 // Ajouter dans _CartographieScreenState :
 List<LatLng> _itineraire = [];
 bool _chargementItineraire = false;
+LatLng? _positionUtilisateur;
+
+Future<LatLng> _positionActuelle() async {
+  try {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return _positionUtilisateur ?? _bobo;
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      return _positionUtilisateur ?? _bobo;
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+    );
+    final current = LatLng(position.latitude, position.longitude);
+    setState(() => _positionUtilisateur = current);
+    return current;
+  } catch (_) {
+    return _positionUtilisateur ?? _bobo;
+  }
+}
 
 Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
   if (destination['latitude'] == null) return;
 
   setState(() => _chargementItineraire = true);
 
-  // Position actuelle simulée — Bobo-Dioulasso centre
-  // En production : utiliser geolocator pour la vraie position
-  const userLat = 11.1771;
-  const userLng = -4.2979;
+  final depart = await _positionActuelle();
+  final userLat = depart.latitude;
+  final userLng = depart.longitude;
 
   final destLat =
       double.parse(destination['latitude'].toString());
@@ -79,19 +104,6 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
   }
 }
 
-// Dans la méthode build, ajouter PolylineLayer dans FlutterMap :
-// children: [
-//   TileLayer(...),
-//   if (_itineraire.isNotEmpty)
-//     PolylineLayer(polylines: [
-//       Polyline(
-//         points: _itineraire,
-//         strokeWidth: 4,
-//         color: const Color(0xFF1E88E5),
-//       ),
-//     ]),
-//   MarkerLayer(markers: _buildMarkers()),
-// ],
   // Centre de Bobo-Dioulasso
   static const LatLng _bobo = LatLng(11.1771, -4.2979);
 
@@ -160,9 +172,27 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
         setState(() => _specialites = List<String>.from(jsonDecode(results[2].body)['specialites'] ?? []));
       }
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cartographie_cache', jsonEncode({
+        'formations': _formations,
+        'pharmacies': _pharmacies,
+        'specialites': _specialites,
+      }));
       setState(() => _modeHorsLigne = false);
     } catch (e) {
-      setState(() => _modeHorsLigne = true);
+      final prefs = await SharedPreferences.getInstance();
+      final cache = prefs.getString('cartographie_cache');
+      if (cache != null) {
+        final data = jsonDecode(cache);
+        setState(() {
+          _formations = data['formations'] ?? [];
+          _pharmacies = data['pharmacies'] ?? [];
+          _specialites = List<String>.from(data['specialites'] ?? []);
+          _modeHorsLigne = true;
+        });
+      } else {
+        setState(() => _modeHorsLigne = true);
+      }
     }
     setState(() => _isLoading = false);
   }
@@ -193,6 +223,23 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
 
   List<Marker> _buildMarkers() {
     final markers = <Marker>[];
+
+    if (_positionUtilisateur != null) {
+      markers.add(Marker(
+        point: _positionUtilisateur!,
+        width: 42,
+        height: 42,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 8)],
+          ),
+          child: const Icon(Icons.my_location, color: Colors.white, size: 19),
+        ),
+      ));
+    }
 
     for (final f in _formations) {
       if (f['latitude'] == null || f['longitude'] == null) continue;
@@ -324,30 +371,50 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
 
           const SizedBox(height: 16),
 
-          // Bouton itinéraire
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                if (item['latitude'] != null) {
-                  _mapController.move(
-                    LatLng(double.parse(item['latitude'].toString()), double.parse(item['longitude'].toString())),
-                    16,
-                  );
-                  _tabController.animateTo(0);
-                }
-              },
-              icon: const Icon(Icons.directions_outlined, size: 18),
-              label: const Text('Voir sur la carte'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E88E5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (item['latitude'] != null) {
+                    _mapController.move(
+                      LatLng(double.parse(item['latitude'].toString()), double.parse(item['longitude'].toString())),
+                      16,
+                    );
+                    _tabController.animateTo(0);
+                  }
+                },
+                icon: const Icon(Icons.place_outlined, size: 18),
+                label: const Text('Carte'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1E88E5),
+                  side: const BorderSide(color: Color(0xFF1E88E5)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _chargementItineraire
+                    ? null
+                    : () {
+                        Navigator.pop(context);
+                        _tabController.animateTo(0);
+                        _afficherItineraire(item);
+                      },
+                icon: const Icon(Icons.directions_outlined, size: 18),
+                label: const Text('Itinéraire'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E88E5),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ]),
           const SizedBox(height: 8),
         ]),
       ),
@@ -430,6 +497,14 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
                             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.laafiba.health',
                           ),
+                          if (_itineraire.isNotEmpty)
+                            PolylineLayer(polylines: [
+                              Polyline(
+                                points: _itineraire,
+                                strokeWidth: 4,
+                                color: const Color(0xFF1E88E5),
+                              ),
+                            ]),
                           MarkerLayer(markers: _buildMarkers()),
                         ],
                       ),

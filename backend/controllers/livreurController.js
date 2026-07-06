@@ -226,8 +226,50 @@ const majStatutLivraison = async (req, res) => {
   }
 };
 
+const majPosition = async (req, res) => {
+  try {
+    const { latitude, longitude, commande_id, vitesse, cap } = req.body;
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ succes: false, message: 'Latitude et longitude requises.' });
+    }
+
+    await db.query(
+      `INSERT INTO positions_livreurs (livreur_id, commande_id, latitude, longitude, vitesse, cap)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         commande_id = VALUES(commande_id),
+         latitude = VALUES(latitude),
+         longitude = VALUES(longitude),
+         vitesse = VALUES(vitesse),
+         cap = VALUES(cap),
+         updated_at = CURRENT_TIMESTAMP`,
+      [
+        req.utilisateur.id,
+        commande_id || null,
+        latitude,
+        longitude,
+        vitesse || null,
+        cap || null,
+      ]
+    );
+
+    if (commande_id) {
+      await db.query(
+        `INSERT INTO suivi_livraison (commande_id, statut, description, latitude, longitude)
+         VALUES (?, 'Position mise à jour', 'Position du livreur actualisée', ?, ?)`,
+        [commande_id, latitude, longitude]
+      );
+    }
+
+    res.json({ succes: true, message: 'Position mise à jour.' });
+  } catch (e) {
+    console.error('majPosition livreur:', e);
+    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+  }
+};
+
 module.exports = {
   getMonProfil, majProfil, toggleDisponibilite,
   getLivraisonsAujourdhui, getMesLivraisons,
-  getHistorique, majStatutLivraison,
+  getHistorique, majStatutLivraison, majPosition,
 };

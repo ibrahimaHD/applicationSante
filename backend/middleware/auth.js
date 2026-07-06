@@ -18,6 +18,7 @@ const verifierToken = async (req, res, next) => {
         succes: false,
         message: 'Accès refusé. Token manquant.'
       });
+      
     }
 
     // Décoder le token

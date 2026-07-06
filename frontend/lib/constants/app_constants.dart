@@ -1,56 +1,57 @@
 import 'package:flutter/material.dart';
- 
+
 class AppColors {
-  static const Color primary = Color(0xFF1E88E5);
-  static const Color primaryDark = Color(0xFF1565C0);
-  static const Color primaryLight = Color(0xFFBBDEFB);
-  static const Color accent = Color(0xFF00ACC1);
-  static const Color background = Color(0xFFF5F9FF);
+  static const Color primary = Color(0xFF1B7A3D);
+  static const Color primaryDark = Color(0xFF12572B);
+  static const Color primaryLight = Color(0xFFDDF2E5);
+  static const Color secondary = Color(0xFFD4A017);
+  static const Color accent = Color(0xFFE74C3C);
+  static const Color background = Color(0xFFF6FAF7);
   static const Color surface = Colors.white;
-  static const Color error = Color(0xFFE53935);
-  static const Color success = Color(0xFF43A047);
-  static const Color textPrimary = Color(0xFF1A237E);
+  static const Color error = Color(0xFFE74C3C);
+  static const Color success = Color(0xFF1B7A3D);
+  static const Color textPrimary = Color(0xFF173A28);
   static const Color textSecondary = Color(0xFF546E7A);
   static const Color divider = Color(0xFFE0E0E0);
-  static const Color inputFill = Color(0xFFF0F4FF);
+  static const Color inputFill = Color(0xFFF0F6F2);
 }
 
- 
+
 class AppTextStyles {
   static const TextStyle heading1 = TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   );
- 
+
   static const TextStyle heading2 = TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
- 
+
   static const TextStyle body = TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
   );
- 
+
   static const TextStyle label = TextStyle(
     fontSize: 13,
     fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   );
- 
+
   static const TextStyle button = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: Colors.white,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   );
 }
- 
+
 class AppConstants {
   // ⚠️ Change selon ta situation :
   // Chrome / Edge (web)  → http://localhost:3000/api
@@ -61,7 +62,7 @@ class AppConstants {
   static const String userKey = 'user_data';
   static const String roleKey = 'user_role';
 }
- 
+
 class UserRole {
   // ✅ Ces valeurs correspondent exactement à ce que le backend renvoie
   static const String patient    = 'patient';
@@ -70,7 +71,7 @@ class UserRole {
   static const String livreur    = 'livreur';
   static const String adminJds   = 'admin';       // backend renvoie 'admin'
   static const String superAdmin = 'superadmin';  // backend renvoie 'superadmin'
- 
+
   static const List<String> allRoles = [
     patient,
     medecin,
@@ -79,7 +80,7 @@ class UserRole {
     adminJds,
     superAdmin,
   ];
- 
+
   static String getLabel(String role) {
     switch (role) {
       case patient:     return 'Patient';
@@ -91,7 +92,7 @@ class UserRole {
       default:          return role;
     }
   }
- 
+
   static IconData getIcon(String role) {
     switch (role) {
       case patient:     return Icons.person_outline;
@@ -103,7 +104,7 @@ class UserRole {
       default:          return Icons.person_outline;
     }
   }
- 
+
   static Color getRoleColor(String role) {
     switch (role) {
       case patient:     return const Color(0xFF1E88E5);
@@ -116,5 +117,3 @@ class UserRole {
     }
   }
 }
-
- 

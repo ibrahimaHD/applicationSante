@@ -117,8 +117,7 @@ const supprimerConsultation = async (req, res) => {
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });
   }
 };
- 
-// ─────────────────────────────────────────
+// ────────────────────────────────────────
 // VACCINATIONS
 // ─────────────────────────────────────────
  
@@ -375,6 +374,38 @@ const getDossierMedical = async (req, res) => {
     const [consultations] = await db.query('SELECT * FROM consultations WHERE patient_id = ? ORDER BY date_consultation DESC', [patientId]);
     const [vaccinations] = await db.query('SELECT * FROM vaccinations WHERE patient_id = ?', [patientId]);
     const [utilisateur] = await db.query('SELECT nom, prenom, email, telephone FROM utilisateurs WHERE id = ?', [patientId]);
+    const [examens] = await db.query(
+      `SELECT e.*,
+              u.nom AS medecin_nom,
+              u.prenom AS medecin_prenom
+       FROM examens e
+       LEFT JOIN utilisateurs u ON e.medecin_id = u.id
+       WHERE e.patient_id = ?
+       ORDER BY e.date_examen DESC, e.created_at DESC`,
+      [patientId]
+    );
+    const [resultats] = await db.query(
+      `SELECT r.*,
+              e.nom_examen,
+              u.nom AS medecin_nom,
+              u.prenom AS medecin_prenom
+       FROM resultats_medicaux r
+       LEFT JOIN examens e ON r.examen_id = e.id
+       LEFT JOIN utilisateurs u ON r.medecin_id = u.id
+       WHERE r.patient_id = ?
+       ORDER BY r.date_resultat DESC, r.created_at DESC`,
+      [patientId]
+    );
+    const [ordonnances] = await db.query(
+      `SELECT o.*,
+              u.nom AS medecin_nom,
+              u.prenom AS medecin_prenom
+       FROM ordonnances o
+       LEFT JOIN utilisateurs u ON o.medecin_id = u.id
+       WHERE o.patient_id = ?
+       ORDER BY o.date_ordonnance DESC, o.created_at DESC`,
+      [patientId]
+    );
  
     res.json({
       succes: true,
@@ -383,8 +414,9 @@ const getDossierMedical = async (req, res) => {
         profil_medical: profil[0] || {},
         consultations,
         vaccinations,
-        examens: [],
-        ordonnances: [],
+        examens,
+        resultats,
+        ordonnances,
         derniere_sync: new Date().toISOString(),
       }
     });
@@ -395,15 +427,71 @@ const getDossierMedical = async (req, res) => {
 };
  
 const getExamens = async (req, res) => {
-  res.json({ succes: true, examens: [] });
+  try {
+    const [examens] = await db.query(
+      `SELECT e.*,
+              u.nom AS medecin_nom,
+              u.prenom AS medecin_prenom,
+              COUNT(r.id) AS nb_resultats
+       FROM examens e
+       LEFT JOIN utilisateurs u ON e.medecin_id = u.id
+       LEFT JOIN resultats_medicaux r ON r.examen_id = e.id
+       WHERE e.patient_id = ?
+       GROUP BY e.id
+       ORDER BY e.date_examen DESC, e.created_at DESC`,
+      [req.utilisateur.id]
+    );
+    res.json({ succes: true, examens });
+  } catch (error) {
+    console.error('getExamens patient:', error);
+    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+  }
 };
  
 const ajouterExamen = async (req, res) => {
-  res.json({ succes: true, message: 'Fonctionnalité bientôt disponible.' });
+  try {
+    const { nom_examen, type_examen, date_examen } = req.body;
+    if (!nom_examen || !type_examen || !date_examen) {
+      return res.status(400).json({ succes: false, message: 'Nom, type et date requis.' });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO examens (patient_id, nom_examen, type_examen, date_examen)
+       VALUES (?, ?, ?, ?)`,
+      [req.utilisateur.id, nom_examen, type_examen, convertirDate(date_examen)]
+    );
+
+    res.status(201).json({ succes: true, message: 'Examen ajouté !', id: result.insertId });
+  } catch (error) {
+    console.error('ajouterExamen patient:', error);
+    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+  }
 };
  
 const getOrdonnances = async (req, res) => {
-  res.json({ succes: true, ordonnances: [] });
+  try {
+    const [ordonnances] = await db.query(
+      `SELECT o.*,
+              u.nom AS medecin_nom,
+              u.prenom AS medecin_prenom
+       FROM ordonnances o
+       LEFT JOIN utilisateurs u ON o.medecin_id = u.id
+       WHERE o.patient_id = ?
+       ORDER BY o.date_ordonnance DESC, o.created_at DESC`,
+      [req.utilisateur.id]
+    );
+    const [uploads] = await db.query(
+      `SELECT *
+       FROM ordonnances_uploadees
+       WHERE patient_id = ?
+       ORDER BY created_at DESC`,
+      [req.utilisateur.id]
+    );
+    res.json({ succes: true, ordonnances, ordonnances_uploadees: uploads });
+  } catch (error) {
+    console.error('getOrdonnances patient:', error);
+    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+  }
 };
  
 const getInfosPersonnelles = async (req, res) => {

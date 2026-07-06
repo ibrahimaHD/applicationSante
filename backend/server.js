@@ -4,6 +4,12 @@ require('dotenv').config();
 const path = require('path');
 
 const app = express();
+const medicamentRoutes = require('./routes/medicament_routes');
+const commandeRoutes = require('./routes/commande_routes');
+const livraisonRoutes = require('./routes/livraison_routes');
+
+
+
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -23,10 +29,17 @@ app.use('/api/admin',        require('./routes/admin'));
 app.use('/api/patient',      require('./routes/patient'));
 app.use('/api/rendez-vous',  require('./routes/rendezVous'));
 app.use('/api/cartographie', require('./routes/cartographie_routes'));
-app.use('/api/pharmacie',    require('./routes/pharmacien_routes'));   // côté patient
+app.use('/api/pharmacie',    require('./routes/pharmacie_routes'));   // côté patient
 app.use('/api/medecin',     require('./routes/medecin'));
 app.use('/api/pharmacien',   require('./routes/pharmacien_routes')); // ← nouveau
 app.use('/api/livreur',      require('./routes/livreur_routes'));     // ← nouveau
+
+app.use('/api/medicaments', medicamentRoutes);
+app.use('/api/commandes', commandeRoutes);
+app.use('/api/livraisons', livraisonRoutes);
+app.use('/api/livraison', livraisonRoutes);
+
+
 
 app.use(express.static(path.join(__dirname, '../frontend/build/web')));
 

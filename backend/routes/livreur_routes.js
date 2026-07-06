@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   getMonProfil, majProfil, toggleDisponibilite,
   getLivraisonsAujourdhui, getMesLivraisons,
-  getHistorique, majStatutLivraison,
+  getHistorique, majStatutLivraison, majPosition,
 } = require('../controllers/livreurController');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
 
@@ -16,6 +16,7 @@ router.patch('/disponibilite',         toggleDisponibilite);
 router.get('/livraisons/aujourd-hui',  getLivraisonsAujourdhui);
 router.get('/livraisons',              getMesLivraisons);
 router.patch('/livraisons/:id',        majStatutLivraison);
+router.post('/position',               majPosition);
 router.get('/historique',              getHistorique);
 
 module.exports = router;

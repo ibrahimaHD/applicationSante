@@ -1,5 +1,6 @@
 // routes/patient.js
 const express = require('express');
+const db = require('../config/database');
 const router = express.Router();
 const {
   getProfilMedical, sauvegarderProfilMedical,
@@ -40,6 +41,8 @@ const upload = multer({
 
 // Ajouter dans patient.js
 router.post('/ordonnances/upload',
+  verifierToken,
+  autoriserRoles('patient', 'admin', 'superadmin'),
   upload.single('ordonnance'),
   async (req, res) => {
     try {
@@ -53,7 +56,7 @@ router.post('/ordonnances/upload',
       const { notes } = req.body;
 
       // Sauvegarder en base
-      await db.query(
+      const [result] = await db.query(
         `INSERT INTO ordonnances_uploadees 
           (patient_id, fichier_path, notes, statut)
          VALUES (?, ?, ?, 'en_attente')`,
@@ -63,6 +66,8 @@ router.post('/ordonnances/upload',
       res.json({
         succes: true,
         message: 'Ordonnance envoyée ! La pharmacie va la traiter sous 30 min.',
+        ordonnance_id: result.insertId,
+        fichier_path: req.file.path,
         fichier: req.file.filename,
       });
     } catch (error) {
@@ -126,4 +131,3 @@ router.get('/resultats', getResultats);
 router.delete('/resultats/:id', supprimerResultat);
 router.get('/audits', getAudits);
 module.exports = router;
- 

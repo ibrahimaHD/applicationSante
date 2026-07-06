@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import '../../services/patient_service.dart';
@@ -28,6 +30,7 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
   bool _isLoading = true;
   bool _synchronisation = false;
   bool _exportEnCours = false;
+  bool _cacheLocal = false;
 
   @override
   void initState() {
@@ -49,6 +52,18 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
     final result = await _service.getDossierMedical();
     if (result['succes'] == true) {
       setState(() => _dossier = result['dossier'] ?? {});
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('dossier_medical_cache_${widget.user.id}', jsonEncode(_dossier));
+      setState(() => _cacheLocal = false);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final cache = prefs.getString('dossier_medical_cache_${widget.user.id}');
+      if (cache != null) {
+        setState(() {
+          _dossier = jsonDecode(cache);
+          _cacheLocal = true;
+        });
+      }
     }
     setState(() => _isLoading = false);
   }
@@ -119,7 +134,7 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF00897B),
         title: Text(
-          widget.horsLigne ? 'Dossier (Hors ligne)' : 'Dossier médical',
+          widget.horsLigne || _cacheLocal ? 'Dossier (Hors ligne)' : 'Dossier médical',
           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         leading: IconButton(
@@ -181,11 +196,12 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
     final profil        = _dossier['profil_medical'] ?? {};
     final consultations = _dossier['consultations']  as List? ?? [];
     final vaccinations  = _dossier['vaccinations']   as List? ?? [];
+    final ordonnances   = _dossier['ordonnances']    as List? ?? [];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(children: [
-        if (widget.horsLigne)
+        if (widget.horsLigne || _cacheLocal)
           Container(
             padding: const EdgeInsets.all(12),
             margin: const EdgeInsets.only(bottom: 16),
@@ -197,7 +213,7 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
             child: const Row(children: [
               Icon(Icons.offline_bolt, color: Colors.orange, size: 20),
               SizedBox(width: 8),
-              Expanded(child: Text('Mode hors ligne — données locales',
+              Expanded(child: Text('Mode hors ligne - donnees locales synchronisees',
                   style: TextStyle(fontSize: 12, color: Colors.orange))),
             ]),
           ),
@@ -218,6 +234,8 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
             _statItem('Consultations', '${consultations.length}'),
             _divider(),
             _statItem('Vaccins', '${vaccinations.length}'),
+            _divider(),
+            _statItem('Ordonnances', '${ordonnances.length}'),
           ]),
         ),
 
@@ -243,6 +261,7 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
         _section('Traitements', Icons.medication_outlined, const Color(0xFF8E24AA), [
           _info('Médicaments', profil['medicaments_actuels'] ?? '—'),
           _info('Médecin traitant', profil['medecin_traitant'] ?? '—'),
+          _info('Ordonnances', '${ordonnances.length} enregistrée(s)'),
         ]),
 
         const SizedBox(height: 24),
