@@ -131,7 +131,7 @@ class QrCodeScreen extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF1E88E5),
-                        letterSpacing: 1),
+                        letterSpacing: 0),
                   ),
                 ]),
               ),

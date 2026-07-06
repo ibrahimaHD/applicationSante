@@ -440,7 +440,7 @@ class _CreerOrdonnanceScreenState extends State<CreerOrdonnanceScreen> {
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
+                    letterSpacing: 0,
                     color: Color(0xFF8E24AA))),
             const SizedBox(height: 8),
             Row(children: [
