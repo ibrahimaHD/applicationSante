@@ -1,6 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -17,6 +16,9 @@ class PdfService {
     final profil        = dossier['profil_medical'] ?? {};
     final consultations = dossier['consultations']  as List? ?? [];
     final vaccinations  = dossier['vaccinations']   as List? ?? [];
+    final examens       = dossier['examens']        as List? ?? [];
+    final resultats     = dossier['resultats']      as List? ?? [];
+    final ordonnances   = dossier['ordonnances']    as List? ?? [];
 
     // ── Styles ────────────────────────────────────────────────────
     const colorPrimary   = PdfColor.fromInt(0xFF1E88E5);
@@ -137,6 +139,8 @@ class PdfService {
             _resumeItem('Consultations', '${consultations.length}', styleLabel, styleValue),
             pw.Container(width: 1, height: 28, color: PdfColor.fromInt(0xFFBBDEFB)),
             _resumeItem('Vaccinations',  '${vaccinations.length}',  styleLabel, styleValue),
+            pw.Container(width: 1, height: 28, color: PdfColor.fromInt(0xFFBBDEFB)),
+            _resumeItem('Examens', '${examens.length}', styleLabel, styleValue),
           ]),
         ),
 
@@ -227,6 +231,49 @@ class PdfService {
               )],
         ),
 
+        sectionCard('Examens et résultats (${examens.length + resultats.length})',
+          examens.isEmpty && resultats.isEmpty
+            ? [pw.Text('Aucun examen ou résultat.', style: styleNormal)]
+            : [
+                ...examens.map((e) => pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 8),
+                  child: pw.Text(
+                    '${e['date_examen'] ?? ''} - ${e['nom_examen'] ?? e['type_examen'] ?? 'Examen'}',
+                    style: styleNormal,
+                  ),
+                )),
+                ...resultats.map((r) => pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 8),
+                  child: pw.Text(
+                    '${r['date_resultat'] ?? ''} - ${r['nom_examen'] ?? r['type_examen'] ?? 'Résultat'} : ${r['resultat'] ?? r['conclusion'] ?? ''}',
+                    style: styleNormal,
+                  ),
+                )),
+              ],
+        ),
+
+        sectionCard('Ordonnances (${ordonnances.length})',
+          ordonnances.isEmpty
+            ? [pw.Text('Aucune ordonnance.', style: styleNormal)]
+            : ordonnances.map((o) => pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 10),
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: colorBg,
+                  borderRadius: pw.BorderRadius.circular(6),
+                  border: pw.Border.all(color: PdfColor.fromInt(0xFFE0E0E0)),
+                ),
+                child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                  pw.Text('Ordonnance du ${o['date_ordonnance'] ?? ''}',
+                      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: colorPrimary)),
+                  if ((o['medicaments'] ?? '').toString().isNotEmpty)
+                    pw.Text(o['medicaments'].toString(), style: styleNormal),
+                  if ((o['instructions'] ?? '').toString().isNotEmpty)
+                    pw.Text('Instructions : ${o['instructions']}', style: styleNormal),
+                ]),
+              )).toList(),
+        ),
+
         // Pied de document
         pw.SizedBox(height: 16),
         pw.Container(
@@ -250,18 +297,16 @@ class PdfService {
 
     // ── Sauvegarder dans le cache puis partager ───────────────────
     final nomFichier = 'dossier_${nomPatient.replaceAll(' ', '_')}.pdf';
-    final bytes = await pdf.save();
+    final Uint8List bytes = await pdf.save();
 
-    // Toujours utiliser le dossier temporaire (cache) — fonctionne sur
-    // Android, iOS et tous les appareils sans permission supplémentaire
-    final dir  = await getTemporaryDirectory();
-    final file = File('${dir.path}/$nomFichier');
-    await file.writeAsBytes(bytes);
-
-    // share_plus ouvre la feuille de partage native :
-    // l'utilisateur peut choisir Drive, WhatsApp, sauvegarder, imprimer…
     await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'application/pdf')],
+      [
+        XFile.fromData(
+          bytes,
+          name: nomFichier,
+          mimeType: 'application/pdf',
+        ),
+      ],
       subject: 'Dossier médical — $nomPatient',
       text: 'Dossier médical généré par LaafiBa le ${_dateAujourdhui()}',
     );

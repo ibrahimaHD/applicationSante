@@ -259,6 +259,22 @@ const majPosition = async (req, res) => {
          VALUES (?, 'Position mise à jour', 'Position du livreur actualisée', ?, ?)`,
         [commande_id, latitude, longitude]
       );
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`commande:${commande_id}`).emit('position_livreur', {
+          commande_id,
+          livreur_id: req.utilisateur.id,
+          livreur_nom: req.utilisateur.nom,
+          livreur_prenom: req.utilisateur.prenom,
+          livreur_tel: req.utilisateur.telephone,
+          latitude,
+          longitude,
+          vitesse: vitesse || null,
+          cap: cap || null,
+          updated_at: new Date().toISOString(),
+        });
+      }
     }
 
     res.json({ succes: true, message: 'Position mise à jour.' });

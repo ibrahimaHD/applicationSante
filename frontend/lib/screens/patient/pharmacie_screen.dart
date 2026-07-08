@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import '../../widgets/app_widgets.dart';
+import 'suivi_gps_screen.dart';
 
 class PharmacieScreen extends StatefulWidget {
   final UserModel user;
@@ -651,9 +652,20 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                                 Row(children: [
                                   Expanded(
                                     child: OutlinedButton.icon(
-                                      onPressed: () => _voirSuivi(c['id']),
-                                      icon: const Icon(Icons.local_shipping_outlined, size: 16),
-                                      label: const Text('Suivi', style: TextStyle(fontSize: 12)),
+                                      onPressed: () {
+                                        if (statut == 'en_livraison') {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => SuiviGpsScreen(commandeId: c['id']),
+                                            ),
+                                          );
+                                        } else {
+                                          _voirSuivi(c['id']);
+                                        }
+                                      },
+                                      icon: Icon(statut == 'en_livraison' ? Icons.map_outlined : Icons.local_shipping_outlined, size: 16),
+                                      label: Text(statut == 'en_livraison' ? 'GPS' : 'Suivi', style: const TextStyle(fontSize: 12)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: color,
                                         side: BorderSide(color: color),

@@ -53,6 +53,7 @@ dependencies:
 
 #actualisation 
   web_socket_channel: ^2.4.0
+  socket_io_client: ^2.0.3+1
 
 
 

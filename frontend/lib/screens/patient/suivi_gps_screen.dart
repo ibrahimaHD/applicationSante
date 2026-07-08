@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../../constants/app_constants.dart';
 
 class SuiviGpsScreen extends StatefulWidget {
@@ -19,11 +20,14 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
   final MapController _mapController = MapController();
   Map<String, dynamic>? _position;
   Timer? _timer;
+  io.Socket? _socket;
   bool _isLoading = true;
+  bool _tempsReel = false;
 
   @override
   void initState() {
     super.initState();
+    _connecterSocket();
     _charger();
     // Rafraîchir toutes les 10 secondes
     _timer = Timer.periodic(
@@ -33,7 +37,45 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _socket?.emit('arreter_suivi_commande', widget.commandeId);
+    _socket?.dispose();
     super.dispose();
+  }
+
+  void _connecterSocket() {
+    final base = AppConstants.baseUrl.replaceFirst('/api', '');
+    _socket = io.io(
+      base,
+      io.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .build(),
+    );
+    _socket?.connect();
+    _socket?.onConnect((_) {
+      _tempsReel = true;
+      _socket?.emit('suivre_commande', widget.commandeId);
+    });
+    _socket?.onDisconnect((_) => _tempsReel = false);
+    _socket?.on('position_livreur', (data) {
+      if (!mounted || data == null) return;
+      setState(() {
+        _position = Map<String, dynamic>.from(data);
+        _isLoading = false;
+      });
+      _deplacerCarte();
+    });
+  }
+
+  void _deplacerCarte() {
+    if (_position == null) return;
+    _mapController.move(
+      LatLng(
+        double.parse(_position!['latitude'].toString()),
+        double.parse(_position!['longitude'].toString()),
+      ),
+      15,
+    );
   }
 
   Future<void> _charger() async {
@@ -55,15 +97,7 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
             _position  = data['position'];
             _isLoading = false;
           });
-          if (_position != null) {
-            _mapController.move(
-              LatLng(
-                double.parse(_position!['latitude'].toString()),
-                double.parse(_position!['longitude'].toString()),
-              ),
-              15,
-            );
-          }
+          _deplacerCarte();
         }
       }
     } catch (e) {
@@ -194,8 +228,8 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
                         const Icon(Icons.circle,
                             color: AppColors.success, size: 10),
                         const SizedBox(width: 4),
-                        const Text('En route',
-                            style: TextStyle(
+                        Text(_tempsReel ? 'Temps réel' : 'En route',
+                            style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.success)),
                       ]),

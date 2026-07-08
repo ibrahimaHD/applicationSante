@@ -18,6 +18,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
   bool _isLoading = false;
   bool _emailEnvoye = false;
+  String? _resetUrl;
+  bool _emailReellementEnvoye = true;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -60,7 +62,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       if (!mounted) return;
 
       if (data['succes'] == true) {
-        setState(() => _emailEnvoye = true);
+        setState(() {
+          _emailEnvoye = true;
+          _resetUrl = data['reset_url'];
+          _emailReellementEnvoye = data['email_envoye'] != false;
+        });
       } else {
         _showError(data['message'] ?? 'Une erreur est survenue');
       }
@@ -224,13 +230,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           const Icon(Icons.check_circle_outline,
               color: AppColors.success, size: 64),
           const SizedBox(height: 16),
-          const Text('Email envoyé !', style: AppTextStyles.heading2),
+          Text(_emailReellementEnvoye ? 'Email envoyé !' : 'Lien généré',
+              style: AppTextStyles.heading2),
           const SizedBox(height: 12),
           Text(
-            'Un lien de réinitialisation a été envoyé à\n${_emailController.text.trim()}\n\nVérifiez votre boîte email (et vos spams).',
+            _emailReellementEnvoye
+                ? 'Un lien de réinitialisation a été envoyé à\n${_emailController.text.trim()}\n\nVérifiez votre boîte email (et vos spams).'
+                : 'Le serveur email n’est pas configuré. Utilisez le lien ci-dessous pour tester la réinitialisation.',
             textAlign: TextAlign.center,
             style: AppTextStyles.body.copyWith(fontSize: 14),
           ),
+          if (_resetUrl != null) ...[
+            const SizedBox(height: 16),
+            SelectableText(
+              _resetUrl!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           AppButton(
             text: 'Retour à la connexion',

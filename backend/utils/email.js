@@ -2,30 +2,43 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
  
-const transporteur = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
- 
-// Tester la connexion au démarrage
-transporteur.verify((error, success) => {
-  if (error) {
-    console.error('❌ Erreur configuration email:', error.message);
-  } else {
-    console.log('✅ Email configuré et prêt à envoyer');
-  }
-});
+const emailConfigure = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+const transporteur = emailConfigure
+  ? nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: Number(process.env.EMAIL_PORT || 587),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    })
+  : null;
+
+if (transporteur) {
+  transporteur.verify((error) => {
+    if (error) {
+      console.error('❌ Erreur configuration email:', error.message);
+    } else {
+      console.log('✅ Email configuré et prêt à envoyer');
+    }
+  });
+} else {
+  console.warn('⚠️ Email non configuré: EMAIL_USER/EMAIL_PASS absents. Mode développement actif.');
+}
  
 const envoyerEmailReset = async (email, prenom, token) => {
-  const lienReset = `http://localhost:3000/reinitialiser-mot-de-passe?token=${token}`;
+  const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+  const lienReset = `${baseUrl}/api/auth/reinitialiser-mot-de-passe/${token}`;
+
+  if (!transporteur) {
+    console.warn('Lien de réinitialisation généré (email non envoyé):', lienReset);
+    return { envoye: false, lienReset };
+  }
  
   const options = {
     from: `"LaafiBa" <${process.env.EMAIL_USER}>`,
@@ -82,10 +95,10 @@ const envoyerEmailReset = async (email, prenom, token) => {
   try {
     const info = await transporteur.sendMail(options);
     console.log('✅ Email envoyé à:', email, '| ID:', info.messageId);
-    return true;
+    return { envoye: true, lienReset };
   } catch (error) {
     console.error('❌ Erreur envoi email:', error.message);
-    throw error;
+    return { envoye: false, lienReset, erreur: error.message };
   }
 };
  

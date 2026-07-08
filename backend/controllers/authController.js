@@ -217,18 +217,79 @@ const motDePasseOublie = async (req, res) => {
       [resetToken, expiration, utilisateur.id]
     );
 
-    // Envoyer l'email
-    await envoyerEmailReset(email, utilisateur.prenom, resetToken);
+    const emailResult = await envoyerEmailReset(email, utilisateur.prenom, resetToken);
 
     res.json({
       succes: true,
-      message: 'Un lien de réinitialisation a été envoyé à votre email.'
+      message: emailResult.envoye
+        ? 'Un lien de réinitialisation a été envoyé à votre email.'
+        : 'Email non configuré. Utilisez le lien de réinitialisation généré.',
+      email_envoye: emailResult.envoye,
+      reset_url: process.env.NODE_ENV === 'production' ? undefined : emailResult.lienReset,
     });
 
   } catch (error) {
     console.error('Erreur reset password:', error);
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });
   }
+};
+
+const formulaireReinitialisation = async (req, res) => {
+  const { token } = req.params;
+  res.type('html').send(`<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Réinitialiser le mot de passe - LaafiBa</title>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#f6faf7;color:#173a28;display:grid;place-items:center;min-height:100vh}
+    .card{width:min(420px,calc(100% - 32px));background:white;border:1px solid #e0e0e0;border-radius:12px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    h1{margin:0 0 8px;color:#1B7A3D;font-size:24px}
+    p{color:#546E7A;line-height:1.5}
+    label{display:block;margin-top:16px;font-size:13px;font-weight:bold}
+    input{box-sizing:border-box;width:100%;padding:12px;border:1px solid #d8e2dc;border-radius:8px;margin-top:6px;font-size:16px}
+    button{width:100%;margin-top:20px;padding:12px;border:0;border-radius:8px;background:#1B7A3D;color:white;font-weight:bold;font-size:16px;cursor:pointer}
+    .msg{margin-top:14px;font-size:14px}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>LaafiBa</h1>
+    <p>Choisissez un nouveau mot de passe.</p>
+    <form id="form">
+      <label>Nouveau mot de passe</label>
+      <input id="password" type="password" minlength="6" required />
+      <label>Confirmer le mot de passe</label>
+      <input id="confirm" type="password" minlength="6" required />
+      <button type="submit">Réinitialiser</button>
+      <div id="msg" class="msg"></div>
+    </form>
+  </main>
+  <script>
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirm').value;
+      const msg = document.getElementById('msg');
+      if (password !== confirm) {
+        msg.style.color = '#E74C3C';
+        msg.textContent = 'Les mots de passe ne correspondent pas.';
+        return;
+      }
+      const res = await fetch('/api/auth/reinitialiser-mot-de-passe/${token}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nouveau_mot_de_passe: password })
+      });
+      const data = await res.json();
+      msg.style.color = data.succes ? '#1B7A3D' : '#E74C3C';
+      msg.textContent = data.message || 'Traitement terminé.';
+      if (data.succes) document.getElementById('form').reset();
+    });
+  </script>
+</body>
+</html>`);
 };
 
 // ─────────────────────────────────────────
@@ -326,5 +387,6 @@ module.exports = {
   deconnexion,
   motDePasseOublie,
   reinitialiserMotDePasse,
+  formulaireReinitialisation,
   monProfil
 };

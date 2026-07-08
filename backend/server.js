@@ -2,8 +2,18 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+app.set('io', io);
 const medicamentRoutes = require('./routes/medicament_routes');
 const commandeRoutes = require('./routes/commande_routes');
 const livraisonRoutes = require('./routes/livraison_routes');
@@ -48,7 +58,17 @@ app.use((req, res) => {
 });
 
 const PORT = 3000;
-app.listen(PORT, '0.0.0.0', () => {
+io.on('connection', (socket) => {
+  socket.on('suivre_commande', (commandeId) => {
+    if (commandeId) socket.join(`commande:${commandeId}`);
+  });
+
+  socket.on('arreter_suivi_commande', (commandeId) => {
+    if (commandeId) socket.leave(`commande:${commandeId}`);
+  });
+});
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Serveur démarré sur http://localhost:${PORT}`);
   console.log(`✅ Routes: auth | dashboard | admin | patient | rendez-vous`);
   console.log(`✅ Routes: cartographie | pharmacie | medecins | pharmacien | livreur\n`);

@@ -94,7 +94,7 @@ class _DossierMedicalScreenState extends State<DossierMedicalScreen>
       final patient    = _dossier['patient'] ?? {};
       final nomPatient = '${patient['prenom'] ?? widget.user.prenom} ${patient['nom'] ?? widget.user.nom}';
 
-      final cheminFichier = await PdfService.exporterDossierMedical(
+      await PdfService.exporterDossierMedical(
         context: context,
         dossier: _dossier,
         nomPatient: nomPatient,

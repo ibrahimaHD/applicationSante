@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { orangeMoneyPayer, moovMoneyPayer } = require('../services/mobileMoney');
 
 const getMedicaments = async (req, res) => {
   try {
@@ -223,6 +224,15 @@ const creerCommande = async (req, res) => {
          VALUES (?, 'Ordonnance à vérifier', 'La pharmacie vérifiera l ordonnance avant la préparation')`,
         [commandeId]
       );
+      await connection.query(
+        `INSERT INTO rappels (patient_id, titre, description, type, date_rappel, heure_rappel)
+         VALUES (?, ?, ?, 'medicament', DATE_ADD(CURDATE(), INTERVAL 30 DAY), '08:00')`,
+        [
+          req.utilisateur.id,
+          'Renouvellement de traitement',
+          `Pensez à vérifier si la commande #${commandeId} doit être renouvelée.`,
+        ]
+      );
     }
 
     await connection.commit();
@@ -266,6 +276,48 @@ const payerCommande = async (req, res) => {
       ? operateur
       : 'orange_money';
     const reference = `MM-${Date.now()}-${commande_id}`;
+    let paiementExterne = { succes: true, simulation: true };
+
+    if (methode === 'orange_money' && process.env.ORANGE_ACCESS_TOKEN && process.env.ORANGE_MERCHANT_KEY) {
+      paiementExterne = await orangeMoneyPayer({
+        montant: commandes[0].montant_total || 0,
+        numero: numero_mobile,
+        reference,
+        description: `Commande LaafiBa #${commande_id}`,
+      });
+    } else if (methode === 'moov_money' && process.env.MOOV_CLIENT_ID && process.env.MOOV_CLIENT_SECRET) {
+      paiementExterne = await moovMoneyPayer({
+        montant: commandes[0].montant_total || 0,
+        numero: numero_mobile,
+        reference,
+      });
+    }
+
+    if (!paiementExterne.succes) {
+      await db.query(
+        `UPDATE commandes
+         SET statut_paiement = 'echoue', mode_paiement = 'mobile_money'
+         WHERE id = ? AND patient_id = ?`,
+        [commande_id, req.utilisateur.id]
+      );
+      await db.query(
+        `INSERT INTO paiements
+          (commande_id, patient_id, montant, methode, numero_mobile, reference_transaction, statut)
+         VALUES (?, ?, ?, ?, ?, ?, 'echec')`,
+        [
+          commande_id,
+          req.utilisateur.id,
+          commandes[0].montant_total || 0,
+          methode,
+          numero_mobile,
+          reference,
+        ]
+      );
+      return res.status(400).json({
+        succes: false,
+        message: paiementExterne.message || 'Paiement mobile money refusé.',
+      });
+    }
 
     await db.query(
       `UPDATE commandes
@@ -300,7 +352,14 @@ const payerCommande = async (req, res) => {
       [commande_id]
     );
 
-    res.json({ succes: true, message: 'Paiement confirmé.' });
+    res.json({
+      succes: true,
+      message: paiementExterne.simulation
+        ? 'Paiement confirmé en mode simulation.'
+        : 'Paiement mobile money initialisé.',
+      reference,
+      simulation: !!paiementExterne.simulation,
+    });
   } catch (error) {
     console.error('payerCommande:', error);
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });

@@ -45,7 +45,7 @@ Future<LatLng> _positionActuelle() async {
     }
 
     final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      desiredAccuracy: LocationAccuracy.medium,
     );
     final current = LatLng(position.latitude, position.longitude);
     setState(() => _positionUtilisateur = current);
@@ -83,7 +83,7 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
     _itineraire = points != null
         ? points.map((p) => LatLng(p[0], p[1])).toList()
         : [
-            const LatLng(userLat, userLng),
+            LatLng(userLat, userLng),
             LatLng(destLat, destLng),
           ];
     _chargementItineraire = false;
@@ -112,6 +112,7 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
   List<String> _specialites = [];
   bool _isLoading = true;
   bool _modeHorsLigne = false;
+  bool _listeDegradee = false;
   String? _filtreType;
   String? _filtreSpecialite;
   bool _gardeUniquement = false;
@@ -449,6 +450,11 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
             icon: Icon(_modeHorsLigne ? Icons.wifi_off : Icons.refresh, color: Colors.white),
             onPressed: _charger,
           ),
+          IconButton(
+            tooltip: 'Liste dégradée',
+            icon: Icon(_listeDegradee ? Icons.map_outlined : Icons.view_list_outlined, color: Colors.white),
+            onPressed: () => setState(() => _listeDegradee = !_listeDegradee),
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -483,7 +489,17 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
                   controller: _tabController,
                   children: [
                     // ── Onglet Carte ──────────────────────────────────
-                    Stack(children: [
+                    _listeDegradee || _modeHorsLigne
+                        ? ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              const Text('Liste dégradée', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                              const SizedBox(height: 8),
+                              ..._formations.map((f) => _ligneDegradee(f, true)),
+                              ..._pharmacies.map((p) => _ligneDegradee(p, false)),
+                            ],
+                          )
+                        : Stack(children: [
                       FlutterMap(
                         mapController: _mapController,
                         options: const MapOptions(
@@ -664,6 +680,21 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
           ),
         );
       },
+    );
+  }
+
+  Widget _ligneDegradee(Map<String, dynamic> item, bool formation) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      leading: Icon(formation ? Icons.local_hospital_outlined : Icons.local_pharmacy_outlined, color: AppColors.primary),
+      title: Text(item['nom'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text([
+        item['type'],
+        item['quartier'],
+        item['adresse'],
+        item['telephone'],
+      ].where((v) => v != null && v.toString().isNotEmpty).join(' - ')),
+      onTap: () => _afficherDetails(item, estFormation: formation),
     );
   }
 

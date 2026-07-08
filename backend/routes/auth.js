@@ -9,6 +9,7 @@ const {
   deconnexion,
   motDePasseOublie,
   reinitialiserMotDePasse,
+  formulaireReinitialisation,
   monProfil
 } = require('../controllers/authController');
 const { verifierToken } = require('../middleware/auth');
@@ -17,6 +18,7 @@ const { verifierToken } = require('../middleware/auth');
 router.post('/inscription', inscription);
 router.post('/connexion', connexion);
 router.post('/mot-de-passe-oublie', motDePasseOublie);
+router.get('/reinitialiser-mot-de-passe/:token', formulaireReinitialisation);
 router.post('/reinitialiser-mot-de-passe/:token', reinitialiserMotDePasse);
 
 // Routes protégées (token JWT requis)

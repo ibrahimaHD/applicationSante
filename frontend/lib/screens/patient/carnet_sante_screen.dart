@@ -16,6 +16,9 @@ class _CarnetSanteScreenState extends State<CarnetSanteScreen> {
   final _service = PatientService();
   List<dynamic> _consultations = [];
   bool _isLoading = true;
+  final _searchController = TextEditingController();
+  String _recherche = '';
+  String _filtre = 'tous';
 
   @override
   void initState() {
@@ -30,6 +33,33 @@ class _CarnetSanteScreenState extends State<CarnetSanteScreen> {
       setState(() => _consultations = result['consultations'] ?? []);
     }
     setState(() => _isLoading = false);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<dynamic> get _consultationsFiltrees {
+    final now = DateTime.now();
+    return _consultations.where((c) {
+      final texte = [
+        c['motif'],
+        c['medecin_nom'],
+        c['diagnostic'],
+        c['traitement'],
+        c['date_consultation'],
+      ].whereType<Object>().join(' ').toLowerCase();
+      final matchRecherche = _recherche.isEmpty || texte.contains(_recherche.toLowerCase());
+      final date = DateTime.tryParse((c['date_consultation'] ?? '').toString());
+      final matchFiltre = switch (_filtre) {
+        'annee' => date != null && date.year == now.year,
+        'diagnostic' => (c['diagnostic'] ?? '').toString().isNotEmpty,
+        _ => true,
+      };
+      return matchRecherche && matchFiltre;
+    }).toList();
   }
 
   Future<void> _ajouterConsultation() async {
@@ -142,14 +172,43 @@ class _CarnetSanteScreenState extends State<CarnetSanteScreen> {
 
                   const SizedBox(height: 16),
 
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) => setState(() => _recherche = v),
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher médecin, diagnostic, traitement...',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(children: [
+                      _filtreChip('Tous', 'tous'),
+                      _filtreChip('Cette année', 'annee'),
+                      _filtreChip('Avec diagnostic', 'diagnostic'),
+                    ]),
+                  ),
+                  const SizedBox(height: 12),
+
                   Expanded(
                     child: RefreshIndicator(
                       onRefresh: _charger,
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: _consultations.length,
+                        itemCount: _consultationsFiltrees.length,
                         itemBuilder: (context, index) {
-                          final c = _consultations[index];
+                          final c = _consultationsFiltrees[index];
                           return Dismissible(
                             key: Key('${c['id']}'),
                             direction: DismissDirection.endToStart,
@@ -218,6 +277,30 @@ class _CarnetSanteScreenState extends State<CarnetSanteScreen> {
       Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
       Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
     ]);
+  }
+
+  Widget _filtreChip(String label, String value) {
+    final selected = _filtre == value;
+    return GestureDetector(
+      onTap: () => setState(() => _filtre = value),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? AppColors.primary : AppColors.divider),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildEmpty() {
