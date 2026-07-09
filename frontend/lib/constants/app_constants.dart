@@ -57,7 +57,7 @@ class AppConstants {
   // Chrome / Edge (web)  → http://localhost:3000/api
   // Émulateur Android    → http://10.0.2.2:3000/api
   // Téléphone réel       → http://192.168.X.X:3000/api
-  static const String baseUrl = 'http://localhost:3000/api';
+  static const String baseUrl = 'https://reversion-flashing-straggler.ngrok-free.dev/api';
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
   static const String roleKey = 'user_role';

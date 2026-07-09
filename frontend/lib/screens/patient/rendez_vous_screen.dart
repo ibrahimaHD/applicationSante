@@ -49,6 +49,7 @@ class _RendezVousScreenState extends State<RendezVousScreen>
 
   Future<void> _charger() async {
   setState(() => _isLoading = true);
+  final prefs = await SharedPreferences.getInstance();
   try {
     final headers = await _headers();
 
@@ -66,11 +67,13 @@ class _RendezVousScreenState extends State<RendezVousScreen>
     if (rdvResponse.statusCode == 200) {
       final data = jsonDecode(rdvResponse.body);
       setState(() => _rendezVous = data['rendez_vous'] ?? []);
+      await prefs.setString('cache_rendez_vous_patient', jsonEncode(_rendezVous));
     }
 
     if (medecinResponse.statusCode == 200) {
       final data = jsonDecode(medecinResponse.body);
       setState(() => _medecins = data['medecins'] ?? []);
+      await prefs.setString('cache_medecins_rdv_patient', jsonEncode(_medecins));
     } else {
       // Affiche le vrai message d'erreur de l'API
       if (mounted) {
@@ -82,10 +85,22 @@ class _RendezVousScreenState extends State<RendezVousScreen>
     }
   } catch (e) {
     debugPrint('Erreur _charger: $e');
+    final rdvCache = prefs.getString('cache_rendez_vous_patient');
+    final medecinsCache = prefs.getString('cache_medecins_rdv_patient');
+    if (rdvCache != null || medecinsCache != null) {
+      setState(() {
+        if (rdvCache != null) _rendezVous = jsonDecode(rdvCache);
+        if (medecinsCache != null) _medecins = jsonDecode(medecinsCache);
+      });
+    }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Erreur réseau. Vérifiez votre connexion.'),
-        backgroundColor: AppColors.error,
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(rdvCache != null || medecinsCache != null
+            ? 'Connexion indisponible. Données rendez-vous affichées depuis le cache.'
+            : 'Erreur réseau. Vérifiez votre connexion.'),
+        backgroundColor: rdvCache != null || medecinsCache != null
+            ? Colors.orange
+            : AppColors.error,
       ));
     }
   }

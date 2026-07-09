@@ -114,6 +114,40 @@ Tu devrais voir :
 | PATCH | `/api/admin/utilisateurs/:id/activation` | admin, superadmin |
 | PATCH | `/api/admin/utilisateurs/:id/role` | superadmin |
 | DELETE | `/api/admin/utilisateurs/:id` | superadmin |
+| GET | `/api/admin/validations-professionnels` | admin, superadmin |
+| PATCH | `/api/admin/validations-professionnels/:id/approuver` | admin, superadmin |
+| PATCH | `/api/admin/validations-professionnels/:id/rejeter` | admin, superadmin |
+
+---
+
+## Paiement Mobile Money
+
+Le backend accepte `orange_money`, `moov_money` et `coris_money` dans `/api/pharmacie/paiement`.
+Sans clés API, le paiement reste en mode simulation pour le développement.
+
+Ajoute les vraies clés dans `backend/.env` :
+
+```env
+APP_URL=http://localhost:3000
+
+ORANGE_ACCESS_TOKEN=ton_token_orange
+ORANGE_MERCHANT_KEY=ta_cle_marchand_orange
+
+MOOV_CLIENT_ID=ton_client_id_moov
+MOOV_CLIENT_SECRET=ton_client_secret_moov
+
+CORIS_API_URL=https://url_api_coris_a_confirmer
+CORIS_API_KEY=ta_cle_api_coris
+CORIS_MERCHANT_ID=ton_identifiant_marchand_coris
+```
+
+Étapes d'intégration :
+
+1. Créer un compte marchand chez l'opérateur choisi.
+2. Récupérer les clés sandbox, puis tester une commande avec un petit montant.
+3. Configurer les URLs callback/notif publiques avec l'URL de ton backend.
+4. Remplacer les clés sandbox par les clés production quand l'opérateur valide le compte.
+5. Vérifier dans la table `paiements` et `transactions_paiement` que la référence est bien enregistrée.
 
 ---
 

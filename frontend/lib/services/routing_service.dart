@@ -102,5 +102,11 @@ class RoutingService {
     return R * 2 * (a < 0 ? 0 : a > 1 ? 1 : a);
   }
 
+  static int estimerDureeMinutes(double distanceKm) {
+    const vitesseUrbaineKmH = 25.0;
+    final minutes = (distanceKm / vitesseUrbaineKmH * 60).round();
+    return minutes < 1 ? 1 : minutes;
+  }
+
   static double _rad(double deg) => deg * 3.14159265 / 180;
 }

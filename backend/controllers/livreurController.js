@@ -181,8 +181,8 @@ const getHistorique = async (req, res) => {
 // ── CHANGER STATUT LIVRAISON ─────────────────────────────────────────
 const majStatutLivraison = async (req, res) => {
   try {
-    const { statut } = req.body;
-    if (!['en_livraison', 'livree'].includes(statut)) {
+    const { statut, motif } = req.body;
+    if (!['en_livraison', 'livree', 'echouee', 'annulee'].includes(statut)) {
       return res.status(400).json({ succes: false, message: 'Statut invalide.' });
     }
 
@@ -197,16 +197,17 @@ const majStatutLivraison = async (req, res) => {
 
     await db.query('UPDATE commandes SET statut = ? WHERE id = ?', [statut, req.params.id]);
 
-    const msg = statut === 'livree'
-      ? 'Livraison confirmée ! Merci.'
-      : 'Livraison en cours…';
+    let msg = 'Livraison en cours.';
+    if (statut === 'livree') msg = 'Livraison confirmée ! Merci.';
+    if (statut === 'echouee') msg = motif || 'Livraison échouée. La pharmacie/patient doit être recontacté.';
+    if (statut === 'annulee') msg = motif || 'Livraison annulée.';
     await db.query(
       'INSERT INTO suivi_livraison (commande_id, statut, description) VALUES (?, ?, ?)',
       [req.params.id, msg, msg]
     );
 
-    // Si livré, remettre le livreur disponible
-    if (statut === 'livree') {
+    // Si la livraison est terminée, remettre le livreur disponible s'il n'a plus de commande en cours.
+    if (['livree', 'echouee', 'annulee'].includes(statut)) {
       const enCours = await db.query(
         'SELECT COUNT(*) AS nb FROM commandes WHERE livreur_id = ? AND statut = ?',
         [req.utilisateur.id, 'en_livraison']

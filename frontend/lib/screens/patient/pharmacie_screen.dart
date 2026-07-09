@@ -149,9 +149,15 @@ class _PharmacieScreenState extends State<PharmacieScreen>
     if (_panier.isEmpty) return;
 
     final adresseController = TextEditingController();
+    final ordonnanceIdController = TextEditingController();
+    final dureeTraitementController = TextEditingController(text: '30');
     String modePaiement = 'mobile_money';
     String operateurPaiement = 'orange_money';
     final numeroController = TextEditingController();
+    final ordonnanceRequise = _panier.any((p) =>
+        p['ordonnance_requise'] == true ||
+        p['ordonnance_requise'] == 1 ||
+        p['ordonnance_requise']?.toString() == '1');
 
     await showModalBottomSheet(
       context: context,
@@ -196,6 +202,44 @@ class _PharmacieScreenState extends State<PharmacieScreen>
               const SizedBox(height: 12),
               AppTextField(label: 'Adresse de livraison *', hint: 'Secteur X, Quartier...', prefixIcon: Icons.location_on_outlined, controller: adresseController),
               const SizedBox(height: 12),
+
+              if (ordonnanceRequise) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.withOpacity(0.25)),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.receipt_long_outlined, size: 18, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Ce panier contient un médicament sur ordonnance. Uploadez l ordonnance puis indiquez son numéro si disponible.',
+                        style: TextStyle(fontSize: 12, color: Colors.orange),
+                      ),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+                AppTextField(
+                  label: 'Numéro ordonnance uploadée',
+                  hint: 'Ex: 12',
+                  prefixIcon: Icons.numbers_outlined,
+                  controller: ordonnanceIdController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                AppTextField(
+                  label: 'Durée du traitement (jours)',
+                  hint: 'Ex: 7, 14, 30',
+                  prefixIcon: Icons.event_repeat_outlined,
+                  controller: dureeTraitementController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Mode paiement
               const Align(alignment: Alignment.centerLeft, child: Text('Mode de paiement', style: AppTextStyles.label)),
@@ -259,6 +303,8 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                     'medicament_id': p['medicament_id'],
                     'quantite': p['quantite'],
                   }).toList();
+                  final ordonnanceId = int.tryParse(ordonnanceIdController.text.trim());
+                  final dureeTraitement = int.tryParse(dureeTraitementController.text.trim());
 
                   final response = await http.post(
                     Uri.parse('${AppConstants.baseUrl}/pharmacie/commandes'),
@@ -267,6 +313,8 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                       'articles': articles,
                       'adresse_livraison': adresseController.text,
                       'mode_paiement': modePaiement,
+                      if (ordonnanceId != null) 'ordonnance_id': ordonnanceId,
+                      if (dureeTraitement != null) 'duree_traitement_jours': dureeTraitement,
                     }),
                   );
 
@@ -372,6 +420,7 @@ class _PharmacieScreenState extends State<PharmacieScreen>
       case 'en_preparation': return const Color(0xFF8E24AA);
       case 'en_livraison': return const Color(0xFFF4511E);
       case 'livree': return AppColors.success;
+      case 'echouee': return AppColors.error;
       case 'annulee': return AppColors.error;
       default: return AppColors.textSecondary;
     }
@@ -384,6 +433,7 @@ class _PharmacieScreenState extends State<PharmacieScreen>
       case 'en_preparation': return 'En préparation';
       case 'en_livraison': return 'En livraison';
       case 'livree': return 'Livrée';
+      case 'echouee': return 'Échouée';
       case 'annulee': return 'Annulée';
       default: return statut;
     }

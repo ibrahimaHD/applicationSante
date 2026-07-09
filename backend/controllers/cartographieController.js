@@ -1,11 +1,26 @@
 const db = require('../config/database');
 
+const distanceSql = (alias = '') => {
+  const p = alias ? `${alias}.` : '';
+  return `(6371 * ACOS(
+    COS(RADIANS(?)) * COS(RADIANS(${p}latitude)) *
+    COS(RADIANS(${p}longitude) - RADIANS(?)) +
+    SIN(RADIANS(?)) * SIN(RADIANS(${p}latitude))
+  ))`;
+};
+
+const coordsParams = (lat, lng) => [Number(lat), Number(lng), Number(lat)];
+
 // ── Formations sanitaires ───────────────────────────────
 const getFormations = async (req, res) => {
   try {
-    const { type, specialite } = req.query;
-    let query = 'SELECT * FROM formations_sanitaires WHERE est_actif = TRUE';
+    const { type, specialite, lat, lng } = req.query;
+    const avecDistance = lat && lng;
+    let query = avecDistance
+      ? `SELECT *, ${distanceSql()} AS distance_km FROM formations_sanitaires WHERE est_actif = TRUE`
+      : 'SELECT * FROM formations_sanitaires WHERE est_actif = TRUE';
     const params = [];
+    if (avecDistance) params.push(...coordsParams(lat, lng));
 
     if (type) {
       query += ' AND type = ?';
@@ -13,13 +28,23 @@ const getFormations = async (req, res) => {
     }
 
     if (specialite) {
-      query = `SELECT DISTINCT f.* FROM formations_sanitaires f
+      query = avecDistance
+        ? `SELECT DISTINCT f.*, ${distanceSql('f')} AS distance_km FROM formations_sanitaires f
+               JOIN specialites_disponibles s ON f.id = s.formation_id
+               WHERE f.est_actif = TRUE AND s.specialite LIKE ? AND s.disponible = TRUE`
+        : `SELECT DISTINCT f.* FROM formations_sanitaires f
                JOIN specialites_disponibles s ON f.id = s.formation_id
                WHERE f.est_actif = TRUE AND s.specialite LIKE ? AND s.disponible = TRUE`;
+      params.length = 0;
+      if (avecDistance) params.push(...coordsParams(lat, lng));
       params.push(`%${specialite}%`);
+      if (type) {
+        query += ' AND f.type = ?';
+        params.push(type);
+      }
     }
 
-    query += ' ORDER BY nom ASC';
+    query += avecDistance ? ' ORDER BY distance_km ASC, nom ASC' : ' ORDER BY nom ASC';
     const [rows] = await db.query(query, params);
 
     // Ajouter les spécialités pour chaque formation
@@ -61,15 +86,19 @@ const getFormationById = async (req, res) => {
 // ── Pharmacies ──────────────────────────────────────────
 const getPharmacies = async (req, res) => {
   try {
-    const { garde } = req.query;
-    let query = 'SELECT * FROM pharmacies WHERE est_actif = TRUE';
+    const { garde, lat, lng } = req.query;
+    const avecDistance = lat && lng;
+    let query = avecDistance
+      ? `SELECT *, ${distanceSql()} AS distance_km FROM pharmacies WHERE est_actif = TRUE`
+      : 'SELECT * FROM pharmacies WHERE est_actif = TRUE';
     const params = [];
+    if (avecDistance) params.push(...coordsParams(lat, lng));
 
     if (garde === 'true') {
       query += ' AND est_garde = TRUE';
     }
 
-    query += ' ORDER BY nom ASC';
+    query += avecDistance ? ' ORDER BY distance_km ASC, nom ASC' : ' ORDER BY nom ASC';
     const [rows] = await db.query(query, params);
     res.json({ succes: true, pharmacies: rows });
   } catch (error) {

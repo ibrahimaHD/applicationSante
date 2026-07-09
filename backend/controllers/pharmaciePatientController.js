@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { orangeMoneyPayer, moovMoneyPayer } = require('../services/mobileMoney');
+const { orangeMoneyPayer, moovMoneyPayer, corisMoneyPayer } = require('../services/mobileMoney');
 
 const getMedicaments = async (req, res) => {
   try {
@@ -119,7 +119,15 @@ const creerCommande = async (req, res) => {
   const connection = await db.getConnection();
 
   try {
-    const { articles, adresse_livraison, mode_paiement, notes, ordonnance_url } = req.body;
+    const {
+      articles,
+      adresse_livraison,
+      mode_paiement,
+      notes,
+      ordonnance_url,
+      ordonnance_id,
+      duree_traitement_jours,
+    } = req.body;
 
     if (!adresse_livraison || !Array.isArray(articles) || articles.length === 0) {
       return res.status(400).json({
@@ -173,15 +181,25 @@ const creerCommande = async (req, res) => {
 
     let ordonnanceCommandeUrl = ordonnance_url || null;
     if (!ordonnanceCommandeUrl && lignes.some((ligne) => ligne.ordonnance_requise)) {
-      const [uploads] = await connection.query(
-        `SELECT id, fichier_path
+      const paramsOrdonnance = [req.utilisateur.id];
+      let ordonnanceQuery = `SELECT id, fichier_path
          FROM ordonnances_uploadees
-         WHERE patient_id = ? AND statut = 'en_attente'
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [req.utilisateur.id]
+         WHERE patient_id = ? AND statut = 'en_attente'`;
+      if (ordonnance_id) {
+        ordonnanceQuery += ' AND id = ?';
+        paramsOrdonnance.push(ordonnance_id);
+      }
+      ordonnanceQuery += ' ORDER BY created_at DESC LIMIT 1';
+
+      const [uploads] = await connection.query(
+        ordonnanceQuery,
+        paramsOrdonnance
       );
       ordonnanceCommandeUrl = uploads[0]?.fichier_path || null;
+    }
+
+    if (lignes.some((ligne) => ligne.ordonnance_requise) && !ordonnanceCommandeUrl) {
+      throw new Error('Une ordonnance est requise pour ce panier. Veuillez uploader ou sélectionner une ordonnance.');
     }
 
     const [commandeResult] = await connection.query(
@@ -224,13 +242,15 @@ const creerCommande = async (req, res) => {
          VALUES (?, 'Ordonnance à vérifier', 'La pharmacie vérifiera l ordonnance avant la préparation')`,
         [commandeId]
       );
+      const joursTraitement = Math.max(1, Number(duree_traitement_jours || 30));
       await connection.query(
         `INSERT INTO rappels (patient_id, titre, description, type, date_rappel, heure_rappel)
-         VALUES (?, ?, ?, 'medicament', DATE_ADD(CURDATE(), INTERVAL 30 DAY), '08:00')`,
+         VALUES (?, ?, ?, 'medicament', DATE_ADD(CURDATE(), INTERVAL ? DAY), '08:00')`,
         [
           req.utilisateur.id,
           'Renouvellement de traitement',
-          `Pensez à vérifier si la commande #${commandeId} doit être renouvelée.`,
+          `Pensez à renouveler ou vérifier le traitement de la commande #${commandeId}.`,
+          joursTraitement,
         ]
       );
     }
@@ -290,6 +310,13 @@ const payerCommande = async (req, res) => {
         montant: commandes[0].montant_total || 0,
         numero: numero_mobile,
         reference,
+      });
+    } else if (methode === 'coris_money' && process.env.CORIS_API_URL && process.env.CORIS_API_KEY && process.env.CORIS_MERCHANT_ID) {
+      paiementExterne = await corisMoneyPayer({
+        montant: commandes[0].montant_total || 0,
+        numero: numero_mobile,
+        reference,
+        description: `Commande LaafiBa #${commande_id}`,
       });
     }
 

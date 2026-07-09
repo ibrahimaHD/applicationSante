@@ -20,10 +20,12 @@ class QrCodeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final qrData = jsonEncode({
+      'patient_id': user.id,
       'matricule': _matricule,
       'nom': user.fullName,
       'role': user.role,
       'app': 'LaafiBa',
+      'schema': 'laafiba_patient_v1',
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
 
@@ -158,7 +160,7 @@ class QrCodeScreen extends StatelessWidget {
 
               // Info matricule
               Text(
-                'Ce code contient votre matricule unique',
+                'Ce code contient votre identifiant patient sécurisé',
                 style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary),

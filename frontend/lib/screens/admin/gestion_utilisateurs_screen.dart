@@ -23,6 +23,7 @@ class GestionUtilisateursScreen extends StatefulWidget {
 class _GestionUtilisateursScreenState
     extends State<GestionUtilisateursScreen> {
   List<dynamic> _utilisateurs = [];
+  List<dynamic> _validations = [];
   List<dynamic> _filtres = [];
   bool _isLoading = true;
   String? _roleFiltreActif;
@@ -57,9 +58,14 @@ class _GestionUtilisateursScreenState
   Future<void> _charger() async {
     setState(() => _isLoading = true);
     try {
+      final headers = await _headers();
       final response = await http.get(
         Uri.parse('${AppConstants.baseUrl}/admin/utilisateurs'),
-        headers: await _headers(),
+        headers: headers,
+      );
+      final validationsResponse = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/admin/validations-professionnels'),
+        headers: headers,
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -67,6 +73,10 @@ class _GestionUtilisateursScreenState
           _utilisateurs = data['utilisateurs'] ?? [];
           _appliquerFiltres();
         });
+      }
+      if (validationsResponse.statusCode == 200) {
+        final data = jsonDecode(validationsResponse.body);
+        setState(() => _validations = data['demandes'] ?? []);
       }
     } catch (e) {
       debugPrint('Erreur: $e');
@@ -167,6 +177,101 @@ class _GestionUtilisateursScreenState
     }
   }
 
+  Future<void> _traiterValidation(int id, bool approuver) async {
+    try {
+      final response = await http.patch(
+        Uri.parse(
+          '${AppConstants.baseUrl}/admin/validations-professionnels/$id/${approuver ? 'approuver' : 'rejeter'}',
+        ),
+        headers: await _headers(),
+        body: approuver ? null : jsonEncode({'raison': 'Documents non validés'}),
+      );
+      final data = jsonDecode(response.body);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(data['message'] ?? ''),
+        backgroundColor: data['succes'] == true ? AppColors.success : AppColors.error,
+      ));
+      if (data['succes'] == true) _charger();
+    } catch (e) {
+      debugPrint('Erreur validation: $e');
+    }
+  }
+
+  Widget _buildValidationsProfessionnels() {
+    final enAttente = _validations.where((v) => v['statut'] == 'en_attente').toList();
+    if (enAttente.isEmpty) return const SizedBox.shrink();
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        child: Row(children: [
+          const Icon(Icons.verified_user_outlined, size: 18, color: Color(0xFF3949AB)),
+          const SizedBox(width: 8),
+          Text(
+            '${enAttente.length} validation(s) professionnelle(s)',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ]),
+      ),
+      SizedBox(
+        height: 176,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: enAttente.length,
+          itemBuilder: (context, index) {
+            final v = enAttente[index];
+            final id = v['id'] is int ? v['id'] as int : int.parse(v['id'].toString());
+            return Container(
+              width: 290,
+              margin: const EdgeInsets.only(right: 10, bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF3949AB).withOpacity(0.18)),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)],
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(
+                  '${v['prenom'] ?? ''} ${v['nom'] ?? ''}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(UserRole.getLabel(v['role'] ?? ''), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                Text('Licence: ${v['numero_licence'] ?? '-'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                Text('Lieu: ${v['lieu_travail'] ?? '-'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                Text('Document: ${v['diplome_url'] ?? '-'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                const Spacer(),
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _traiterValidation(id, false),
+                      icon: const Icon(Icons.close, size: 16),
+                      label: const Text('Rejeter'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _traiterValidation(id, true),
+                      icon: const Icon(Icons.check, size: 16),
+                      label: const Text('Valider'),
+                    ),
+                  ),
+                ]),
+              ]),
+            );
+          },
+        ),
+      ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -260,6 +365,8 @@ class _GestionUtilisateursScreenState
             ),
           ]),
         ),
+
+        _buildValidationsProfessionnels(),
 
         // Liste
         _isLoading

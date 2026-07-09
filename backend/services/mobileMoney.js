@@ -68,4 +68,37 @@ const moovMoneyPayer = async ({
   }
 };
 
-module.exports = { orangeMoneyPayer, moovMoneyPayer };
+// ── Coris Money ─────────────────────────────────────────
+const corisMoneyPayer = async ({
+  montant,
+  numero,
+  reference,
+  description,
+}) => {
+  try {
+    const response = await axios.post(
+      process.env.CORIS_API_URL,
+      {
+        merchant_id: process.env.CORIS_MERCHANT_ID,
+        amount: montant,
+        currency: 'XOF',
+        customer_phone: numero,
+        reference,
+        description: description || 'Paiement LaafiBa',
+        callback_url: `${process.env.APP_URL}/api/paiement/callback/coris`,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.CORIS_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    return { succes: true, data: response.data };
+  } catch (error) {
+    console.error('Coris Money erreur:', error.response?.data || error.message);
+    return { succes: false, message: error.message };
+  }
+};
+
+module.exports = { orangeMoneyPayer, moovMoneyPayer, corisMoneyPayer };

@@ -78,6 +78,7 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
 
   final distance = RoutingService.calculerDistance(
       userLat, userLng, destLat, destLng);
+  final dureeMinutes = RoutingService.estimerDureeMinutes(distance);
 
   setState(() {
     _itineraire = points != null
@@ -98,7 +99,7 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
   if (mounted) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(
-          'Distance estimée : ${distance.toStringAsFixed(1)} km'),
+          'Distance estimée : ${distance.toStringAsFixed(1)} km • environ $dureeMinutes min'),
       backgroundColor: const Color(0xFF1E88E5),
     ));
   }
@@ -145,6 +146,11 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
+      String geoParams = '';
+      try {
+        final position = await _positionActuelle();
+        geoParams = 'lat=${position.latitude}&lng=${position.longitude}';
+      } catch (_) {}
 
       String formationUrl = '${AppConstants.baseUrl}/cartographie/formations';
       if (_filtreType != null && _filtreType != 'Tous') {
@@ -153,9 +159,15 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
       if (_filtreSpecialite != null) {
         formationUrl += formationUrl.contains('?') ? '&specialite=$_filtreSpecialite' : '?specialite=$_filtreSpecialite';
       }
+      if (geoParams.isNotEmpty) {
+        formationUrl += formationUrl.contains('?') ? '&$geoParams' : '?$geoParams';
+      }
 
       String pharmacieUrl = '${AppConstants.baseUrl}/cartographie/pharmacies';
       if (_gardeUniquement) pharmacieUrl += '?garde=true';
+      if (geoParams.isNotEmpty) {
+        pharmacieUrl += pharmacieUrl.contains('?') ? '&$geoParams' : '?$geoParams';
+      }
 
       final results = await Future.wait([
         http.get(Uri.parse(formationUrl), headers: headers),

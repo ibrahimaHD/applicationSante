@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,7 +20,7 @@ class ScannerOrdonnanceScreen extends StatefulWidget {
 
 class _ScannerOrdonnanceScreenState
     extends State<ScannerOrdonnanceScreen> {
-  File? _image;
+  XFile? _image;
   bool _isUploading = false;
   String? _resultat;
   final _notesController = TextEditingController();
@@ -36,7 +37,7 @@ class _ScannerOrdonnanceScreenState
         await picker.pickImage(source: source, imageQuality: 80);
     if (picked != null) {
       setState(() {
-        _image    = File(picked.path);
+        _image    = picked;
         _resultat = null;
       });
     }
@@ -55,8 +56,19 @@ class _ScannerOrdonnanceScreenState
         Uri.parse('${AppConstants.baseUrl}/patient/ordonnances/upload'),
       );
       request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(await http.MultipartFile.fromPath(
-          'ordonnance', _image!.path));
+      if (kIsWeb) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'ordonnance',
+          await _image!.readAsBytes(),
+          filename: _image!.name,
+        ));
+      } else {
+        request.files.add(await http.MultipartFile.fromPath(
+          'ordonnance',
+          _image!.path,
+          filename: _image!.name,
+        ));
+      }
       request.fields['notes'] = _notesController.text;
 
       final response = await request.send();
@@ -66,7 +78,10 @@ class _ScannerOrdonnanceScreenState
 
       if (mounted) {
         setState(() {
-          _resultat    = data['message'] ?? '';
+          final ordonnanceId = data['ordonnance_id'];
+          _resultat = ordonnanceId == null
+              ? data['message'] ?? ''
+              : '${data['message'] ?? 'Ordonnance envoyée.'} ID ordonnance: $ordonnanceId';
           _isUploading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -164,7 +179,15 @@ class _ScannerOrdonnanceScreenState
               child: _image != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(15),
-                      child: Image.file(_image!, fit: BoxFit.cover),
+                      child: FutureBuilder<Uint8List>(
+                        future: _image!.readAsBytes(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                        },
+                      ),
                     )
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,

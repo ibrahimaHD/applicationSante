@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const db = require('../config/database');
 const { envoyerEmailReset } = require('../utils/email');
+const { ensureValidationProfessionnelsTable } = require('../utils/validationProfessionnels');
 
 // ─────────────────────────────────────────
 // INSCRIPTION
@@ -58,11 +59,14 @@ const inscription = async (req, res) => {
     // Hasher le mot de passe (sécurité)
     const motDePasseHash = await bcrypt.hash(mot_de_passe, 12);
 
-    // Créer l'utilisateur
+    const validationAdminRequise = ['medecin', 'pharmacien'].includes(roleNom);
+
+    // Créer l'utilisateur. Les comptes professionnels restent inactifs
+    // jusqu'à vérification des documents par l'administrateur.
     const [resultat] = await db.query(
-      `INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, telephone, role_id)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [nom, prenom, email, motDePasseHash, telephone || null, roleData[0].id]
+      `INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, telephone, role_id, est_actif)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [nom, prenom, email, motDePasseHash, telephone || null, roleData[0].id, validationAdminRequise ? 0 : 1]
     );
 
     const utilisateurId = resultat.insertId;
@@ -78,7 +82,9 @@ const inscription = async (req, res) => {
 
     res.status(201).json({
       succes: true,
-      message: 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.'
+      message: validationAdminRequise
+        ? 'Demande envoyée. Un administrateur doit vérifier vos documents avant activation du compte.'
+        : 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.'
     });
 
   } catch (error) {
@@ -357,6 +363,13 @@ const creerProfilRole = async (role, utilisateurId, body) => {
         'INSERT INTO medecins (utilisateur_id, specialite, numero_ordre, hopital_clinique) VALUES (?, ?, ?, ?)',
         [utilisateurId, body.specialite || null, body.numero_ordre || null, body.hopital_clinique || null]
       );
+      await enregistrerValidationProfessionnelle(role, utilisateurId, {
+        numero_licence: body.numero_ordre,
+        lieu_travail: body.hopital_clinique,
+        diplome_url: body.diplome_url,
+        document_identite_url: body.document_identite_url,
+        notes: body.notes_validation,
+      });
       break;
     case 'patient':
       await db.query(
@@ -369,6 +382,13 @@ const creerProfilRole = async (role, utilisateurId, body) => {
         'INSERT INTO pharmaciens (utilisateur_id, nom_pharmacie, adresse_pharmacie, numero_licence) VALUES (?, ?, ?, ?)',
         [utilisateurId, body.nom_pharmacie || null, body.adresse_pharmacie || null, body.numero_licence || null]
       );
+      await enregistrerValidationProfessionnelle(role, utilisateurId, {
+        numero_licence: body.numero_licence,
+        lieu_travail: body.nom_pharmacie || body.adresse_pharmacie,
+        diplome_url: body.diplome_url,
+        document_identite_url: body.document_identite_url,
+        notes: body.notes_validation,
+      });
       break;
     case 'livreur':
       await db.query(
@@ -379,6 +399,33 @@ const creerProfilRole = async (role, utilisateurId, body) => {
     default:
       break;
   }
+};
+
+const enregistrerValidationProfessionnelle = async (role, utilisateurId, infos) => {
+  await ensureValidationProfessionnelsTable();
+  await db.query(
+    `INSERT INTO validations_professionnels
+      (utilisateur_id, role, numero_licence, lieu_travail, diplome_url, document_identite_url, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       role = VALUES(role),
+       numero_licence = VALUES(numero_licence),
+       lieu_travail = VALUES(lieu_travail),
+       diplome_url = VALUES(diplome_url),
+       document_identite_url = VALUES(document_identite_url),
+       notes = VALUES(notes),
+       statut = 'en_attente',
+       raison_rejet = NULL`,
+    [
+      utilisateurId,
+      role,
+      infos.numero_licence || null,
+      infos.lieu_travail || null,
+      infos.diplome_url || null,
+      infos.document_identite_url || null,
+      infos.notes || null,
+    ]
+  );
 };
 
 module.exports = {

@@ -335,11 +335,31 @@ const ajouterEnfant = async (req, res) => {
       [req.utilisateur.id, nom, prenom, convertirDate(date_naissance), sexe]
     );
  
-    const vaccinsRecommandes = ['BCG', 'Hépatite B (1)', 'Pentavalent (1)', 'Pentavalent (2)', 'Pentavalent (3)', 'Rougeole', 'Méningite A'];
-    for (const vaccin of vaccinsRecommandes) {
+    const naissanceSql = convertirDate(date_naissance);
+    const calendrierVaccinal = [
+      { nom: 'BCG', jours: 0 },
+      { nom: 'Hépatite B (1)', jours: 0 },
+      { nom: 'Pentavalent (1)', jours: 42 },
+      { nom: 'Pentavalent (2)', jours: 70 },
+      { nom: 'Pentavalent (3)', jours: 98 },
+      { nom: 'Rougeole', jours: 270 },
+      { nom: 'Méningite A', jours: 270 },
+    ];
+    for (const vaccin of calendrierVaccinal) {
       await db.query(
         'INSERT INTO vaccinations_enfants (enfant_id, nom_vaccin, statut) VALUES (?, ?, ?)',
-        [result.insertId, vaccin, 'non_fait']
+        [result.insertId, vaccin.nom, 'non_fait']
+      );
+      await db.query(
+        `INSERT INTO rappels (patient_id, titre, description, type, date_rappel, heure_rappel)
+         VALUES (?, ?, ?, 'vaccination', DATE_ADD(?, INTERVAL ? DAY), '08:00')`,
+        [
+          req.utilisateur.id,
+          `Vaccin ${vaccin.nom}`,
+          `Rappel vaccination pour ${prenom || ''} ${nom}`.trim(),
+          naissanceSql,
+          vaccin.jours,
+        ]
       );
     }
  

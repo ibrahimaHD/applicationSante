@@ -11,7 +11,6 @@ class AuthResult {
  
   AuthResult({required this.success, this.message, this.user});
 }
- 
 class AuthService {
   // Utilisateur en mémoire (accessible via currentUser)
   UserModel? _currentUser;
@@ -90,8 +89,14 @@ class AuthService {
         // Champs médecin
         if (donnees['specialite'] != null) 'specialite': donnees['specialite'],
         if (donnees['numero_licence'] != null) 'numero_ordre': donnees['numero_licence'],
+        if (donnees['hopital_clinique'] != null) 'hopital_clinique': donnees['hopital_clinique'],
+        if (donnees['diplome_url'] != null) 'diplome_url': donnees['diplome_url'],
+        if (donnees['document_identite_url'] != null) 'document_identite_url': donnees['document_identite_url'],
         // Champs pharmacien
         if (donnees['nom_pharmacie'] != null) 'nom_pharmacie': donnees['nom_pharmacie'],
+        if (donnees['adresse_pharmacie'] != null) 'adresse_pharmacie': donnees['adresse_pharmacie'],
+        if (donnees['nom_pharmacie'] != null && donnees['numero_licence'] != null)
+          'numero_licence': donnees['numero_licence'],
         // Champs livreur
         if (donnees['vehicle_type'] != null) 'vehicule': donnees['vehicle_type'],
         if (donnees['zone'] != null) 'zone_livraison': donnees['zone'],
@@ -142,4 +147,3 @@ class AuthService {
     return UserModel.fromJson({...userMap, 'token': token});
   }
 }
- 

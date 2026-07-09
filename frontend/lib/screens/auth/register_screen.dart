@@ -24,6 +24,9 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _specialiteController = TextEditingController();
   final _licenceController = TextEditingController();
   final _pharmacieController = TextEditingController();
+  final _lieuTravailController = TextEditingController();
+  final _diplomeUrlController = TextEditingController();
+  final _documentIdentiteUrlController = TextEditingController();
   final _zoneController = TextEditingController();
  
   String? _selectedRole;
@@ -89,6 +92,9 @@ class _RegisterScreenState extends State<RegisterScreen>
     _specialiteController.dispose();
     _licenceController.dispose();
     _pharmacieController.dispose();
+    _lieuTravailController.dispose();
+    _diplomeUrlController.dispose();
+    _documentIdentiteUrlController.dispose();
     _zoneController.dispose();
     super.dispose();
   }
@@ -114,9 +120,15 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (_selectedRole == UserRole.medecin) {
       userData['specialite'] = _specialiteController.text.trim();
       userData['numero_licence'] = _licenceController.text.trim();
+      userData['hopital_clinique'] = _lieuTravailController.text.trim();
+      userData['diplome_url'] = _diplomeUrlController.text.trim();
+      userData['document_identite_url'] = _documentIdentiteUrlController.text.trim();
     } else if (_selectedRole == UserRole.pharmacien) {
       userData['nom_pharmacie'] = _pharmacieController.text.trim();
       userData['numero_licence'] = _licenceController.text.trim();
+      userData['adresse_pharmacie'] = _lieuTravailController.text.trim();
+      userData['diplome_url'] = _diplomeUrlController.text.trim();
+      userData['document_identite_url'] = _documentIdentiteUrlController.text.trim();
     } else if (_selectedRole == UserRole.livreur) {
       userData['vehicle_type'] = _selectedVehicle;
       userData['zone'] = _zoneController.text.trim();
@@ -208,6 +220,30 @@ class _RegisterScreenState extends State<RegisterScreen>
             controller: _licenceController,
             validator: (v) => v == null || v.isEmpty ? 'Numéro de licence requis' : null,
           ),
+          const SizedBox(height: 14),
+          AppTextField(
+            label: 'Lieu de travail',
+            hint: 'Hôpital, clinique ou cabinet',
+            prefixIcon: Icons.business_outlined,
+            controller: _lieuTravailController,
+            validator: (v) => v == null || v.isEmpty ? 'Lieu de travail requis' : null,
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            label: 'Lien diplôme / document professionnel',
+            hint: 'URL du fichier justificatif',
+            prefixIcon: Icons.description_outlined,
+            controller: _diplomeUrlController,
+            validator: (v) => v == null || v.isEmpty ? 'Document professionnel requis' : null,
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            label: 'Lien pièce d identité',
+            hint: 'URL du document d identité',
+            prefixIcon: Icons.assignment_ind_outlined,
+            controller: _documentIdentiteUrlController,
+            validator: (v) => v == null || v.isEmpty ? 'Pièce d identité requise' : null,
+          ),
         ]);
  
       case UserRole.pharmacien:
@@ -229,6 +265,30 @@ class _RegisterScreenState extends State<RegisterScreen>
             prefixIcon: Icons.badge_outlined,
             controller: _licenceController,
             validator: (v) => v == null || v.isEmpty ? 'Numéro de licence requis' : null,
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            label: 'Adresse de la pharmacie',
+            hint: 'Quartier, secteur, ville',
+            prefixIcon: Icons.location_on_outlined,
+            controller: _lieuTravailController,
+            validator: (v) => v == null || v.isEmpty ? 'Adresse requise' : null,
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            label: 'Lien autorisation / diplôme',
+            hint: 'URL du fichier justificatif',
+            prefixIcon: Icons.description_outlined,
+            controller: _diplomeUrlController,
+            validator: (v) => v == null || v.isEmpty ? 'Document professionnel requis' : null,
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            label: 'Lien pièce d identité',
+            hint: 'URL du document d identité',
+            prefixIcon: Icons.assignment_ind_outlined,
+            controller: _documentIdentiteUrlController,
+            validator: (v) => v == null || v.isEmpty ? 'Pièce d identité requise' : null,
           ),
         ]);
  

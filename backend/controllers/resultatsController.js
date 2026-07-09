@@ -19,6 +19,18 @@ const formaterDate = (date) => {
   return s.includes('T') ? s.split('T')[0] : s.substring(0, 10);
 };
 
+const auditerAccesPatient = async (patientId, utilisateur, typeAcces) => {
+  if (!patientId) return;
+  try {
+    await db.query(
+      'INSERT INTO audits_acces (patient_id, accede_par, role_acces, type_acces) VALUES (?, ?, ?, ?)',
+      [patientId, utilisateur.id, utilisateur.role || 'medecin', typeAcces]
+    );
+  } catch (error) {
+    console.warn('Audit accès non enregistré:', error.message);
+  }
+};
+
 // ═══════════════════════════════════════════════════════
 // MÉDECIN — créer un examen pour un patient
 // POST /api/medecin/examens
@@ -94,6 +106,9 @@ const getExamensMedecin = async (req, res) => {
 
     query += ' GROUP BY e.id ORDER BY e.date_examen DESC LIMIT 100';
     const [rows] = await db.query(query, params);
+    if (patient_id) {
+      await auditerAccesPatient(patient_id, req.utilisateur, 'Consultation examens médicaux');
+    }
     res.json({ succes: true, examens: rows });
   } catch (error) {
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });
@@ -214,6 +229,9 @@ const getResultatsMedecin = async (req, res) => {
 
     query += ' ORDER BY r.date_resultat DESC LIMIT 100';
     const [rows] = await db.query(query, params);
+    if (patient_id) {
+      await auditerAccesPatient(patient_id, req.utilisateur, 'Consultation résultats médicaux');
+    }
     res.json({ succes: true, resultats: rows });
   } catch (error) {
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });

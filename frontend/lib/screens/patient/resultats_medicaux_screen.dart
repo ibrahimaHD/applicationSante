@@ -44,6 +44,7 @@ class _ResultatsMedicauxScreenState extends State<ResultatsMedicauxScreen>
 
   Future<void> _charger() async {
     setState(() => _isLoading = true);
+    final prefs = await SharedPreferences.getInstance();
     try {
       final response = await http.get(
         Uri.parse('${AppConstants.baseUrl}/patient/resultats'),
@@ -52,9 +53,20 @@ class _ResultatsMedicauxScreenState extends State<ResultatsMedicauxScreen>
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() => _resultats = data['resultats'] ?? []);
+        await prefs.setString('cache_resultats_medicaux_patient', jsonEncode(_resultats));
       }
     } catch (e) {
       debugPrint('Erreur résultats: $e');
+      final cache = prefs.getString('cache_resultats_medicaux_patient');
+      if (cache != null) {
+        setState(() => _resultats = jsonDecode(cache));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Connexion indisponible. Résultats affichés depuis le cache.'),
+            backgroundColor: Colors.orange,
+          ));
+        }
+      }
     }
     setState(() => _isLoading = false);
   }
@@ -79,7 +91,15 @@ class _ResultatsMedicauxScreenState extends State<ResultatsMedicauxScreen>
   // ── Helpers ──────────────────────────────────────────
   List<dynamic> _filtrer(String type) => type == 'tous'
       ? _resultats
-      : _resultats.where((r) => r['type'] == type).toList();
+      : _resultats.where((r) {
+          final examen = (r['type'] ?? r['type_examen'] ?? '').toString();
+          if (type == 'analyse') return examen.contains('analyse');
+          if (type == 'imagerie') {
+            return ['irm', 'echographie', 'radiographie', 'scanner']
+                .any(examen.contains);
+          }
+          return examen == type;
+        }).toList();
 
   Color _statutColor(String? statut) {
     switch (statut) {
