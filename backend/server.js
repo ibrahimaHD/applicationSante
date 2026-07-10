@@ -17,6 +17,7 @@ app.set('io', io);
 const medicamentRoutes = require('./routes/medicament_routes');
 const commandeRoutes = require('./routes/commande_routes');
 const livraisonRoutes = require('./routes/livraison_routes');
+const uploadRoutes = require('./routes/upload');
 
 
 
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth',         require('./routes/auth'));
 app.use('/api/dashboard',    require('./routes/dashboard'));
@@ -43,6 +45,9 @@ app.use('/api/pharmacie',    require('./routes/pharmacie_routes'));   // côté 
 app.use('/api/medecin',     require('./routes/medecin'));
 app.use('/api/pharmacien',   require('./routes/pharmacien_routes')); // ← nouveau
 app.use('/api/livreur',      require('./routes/livreur_routes'));     // ← nouveau
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));  // ← ajouter ici (fichiers statiques)
+app.use('/api/upload', uploadRoutes);                                   // ← ajouter ici (route d'upload)
+
 
 app.use('/api/medicaments', medicamentRoutes);
 app.use('/api/commandes', commandeRoutes);

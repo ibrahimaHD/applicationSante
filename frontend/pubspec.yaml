@@ -30,6 +30,8 @@ dependencies:
 
   # PDF - Génération et impression/partage
   pdf: ^3.10.8
+  http_parser: ^4.0.2
+
 
 
   # QR code 
@@ -38,18 +40,16 @@ dependencies:
 # geolocalisation 
   geolocator: ^12.0.0
 #Partage de fichiers (PDF → Télécharger / Imprimer / Envoyer)
-  share_plus: ^9.0.0
+  share_plus: ^12.0.0
  
   # Accès au système de fichiers
   path_provider: ^2.1.2
  
-
-
-   
+  url_launcher: ^6.3.0  
   # À AJOUTER pour Module 3
   image_picker: ^1.0.4        # Upload ordonnance (photo/galerie)
+  file_picker: ^8.1.6         # Documents PDF/images inscription professionnels
   permission_handler: ^11.0.1  # Permissions caméra/galerie
-
 
 #actualisation 
   web_socket_channel: ^2.4.0

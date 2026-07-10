@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -100,14 +101,24 @@ class AuthService {
         // Champs livreur
         if (donnees['vehicle_type'] != null) 'vehicule': donnees['vehicle_type'],
         if (donnees['zone'] != null) 'zone_livraison': donnees['zone'],
+        if (donnees['numero_permis'] != null) 'numero_permis': donnees['numero_permis'],
       };
- 
-      final response = await http.post(
+
+      final request = http.MultipartRequest(
+        'POST',
         Uri.parse('${AppConstants.baseUrl}/auth/inscription'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
       );
- 
+      body.forEach((key, value) {
+        if (value != null) request.fields[key] = value.toString();
+      });
+
+      await _ajouterFichier(request, 'diplome', donnees['diplome']);
+      await _ajouterFichier(request, 'document_identite', donnees['document_identite']);
+      await _ajouterFichier(request, 'autorisation_exercice', donnees['autorisation_exercice']);
+      await _ajouterFichier(request, 'permis_conduire', donnees['permis_conduire']);
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
       final data = jsonDecode(response.body) as Map<String, dynamic>;
  
       return AuthResult(
@@ -119,6 +130,29 @@ class AuthService {
         success: false,
         message: 'Serveur inaccessible.',
       );
+    }
+  }
+
+  Future<void> _ajouterFichier(
+    http.MultipartRequest request,
+    String field,
+    dynamic file,
+  ) async {
+    if (file == null || file is! PlatformFile) return;
+    if (file.bytes != null) {
+      request.files.add(http.MultipartFile.fromBytes(
+        field,
+        file.bytes!,
+        filename: file.name,
+      ));
+      return;
+    }
+    if (file.path != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        field,
+        file.path!,
+        filename: file.name,
+      ));
     }
   }
  

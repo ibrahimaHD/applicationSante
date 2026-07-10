@@ -59,7 +59,14 @@ const inscription = async (req, res) => {
     // Hasher le mot de passe (sécurité)
     const motDePasseHash = await bcrypt.hash(mot_de_passe, 12);
 
-    const validationAdminRequise = ['medecin', 'pharmacien'].includes(roleNom);
+    const fichiersValidation = extraireFichiersValidation(req.files || {});
+    req.body.diplome_url = fichiersValidation.diplome_url || req.body.diplome_url;
+    req.body.document_identite_url = fichiersValidation.document_identite_url || req.body.document_identite_url;
+    req.body.autorisation_exercice_url =
+      fichiersValidation.autorisation_exercice_url || req.body.autorisation_exercice_url;
+    req.body.permis_conduire_url = fichiersValidation.permis_conduire_url || req.body.permis_conduire_url;
+
+    const validationAdminRequise = ['medecin', 'pharmacien', 'livreur'].includes(roleNom);
 
     // Créer l'utilisateur. Les comptes professionnels restent inactifs
     // jusqu'à vérification des documents par l'administrateur.
@@ -130,7 +137,7 @@ const connexion = async (req, res) => {
     if (!utilisateur.est_actif) {
       return res.status(403).json({
         succes: false,
-        message: 'Votre compte est désactivé. Contactez l\'administrateur.'
+        message: 'Votre compte est en attente de validation administrateur ou désactivé.'
       });
     }
 
@@ -395,6 +402,13 @@ const creerProfilRole = async (role, utilisateurId, body) => {
         'INSERT INTO livreurs (utilisateur_id, zone_livraison, vehicule) VALUES (?, ?, ?)',
         [utilisateurId, body.zone_livraison || null, body.vehicule || null]
       );
+      await enregistrerValidationProfessionnelle(role, utilisateurId, {
+        numero_licence: body.numero_permis || null,
+        lieu_travail: body.zone_livraison,
+        diplome_url: body.permis_conduire_url || body.document_identite_url,
+        document_identite_url: body.document_identite_url,
+        notes: body.notes_validation || body.vehicule,
+      });
       break;
     default:
       break;
@@ -426,6 +440,19 @@ const enregistrerValidationProfessionnelle = async (role, utilisateurId, infos) 
       infos.notes || null,
     ]
   );
+};
+
+const extraireFichiersValidation = (files) => {
+  const cheminPublic = (file) => {
+    if (!file) return null;
+    return file.path.replace(/\\/g, '/');
+  };
+  return {
+    diplome_url: cheminPublic(files.diplome?.[0]),
+    document_identite_url: cheminPublic(files.document_identite?.[0]),
+    autorisation_exercice_url: cheminPublic(files.autorisation_exercice?.[0]),
+    permis_conduire_url: cheminPublic(files.permis_conduire?.[0]),
+  };
 };
 
 module.exports = {

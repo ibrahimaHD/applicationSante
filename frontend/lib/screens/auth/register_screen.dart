@@ -2,19 +2,20 @@ import 'package:flutter/material.dart';
 import '../../constants/app_constants.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/app_widgets.dart';
- 
+import '../../widgets/document_picker_field.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
- 
+
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
- 
+
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
- 
+
   final _nomController = TextEditingController();
   final _prenomController = TextEditingController();
   final _emailController = TextEditingController();
@@ -28,23 +29,23 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _diplomeUrlController = TextEditingController();
   final _documentIdentiteUrlController = TextEditingController();
   final _zoneController = TextEditingController();
- 
+
   String? _selectedRole;
   String? _selectedVehicle;
   bool _isLoading = false;
- 
+
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
- 
+
   final List<String> _registerableRoles = [
     UserRole.patient,
     UserRole.medecin,
     UserRole.pharmacien,
     UserRole.livreur,
   ];
- 
+
   final List<String> _vehicleTypes = ['Moto', 'Vélo', 'Voiture', 'À pied'];
- 
+
   // ── Validation commune ─────────────────────────────────────────────────────
   String? _validateEmail(String? v) {
     if (v == null || v.isEmpty) return 'Email requis';
@@ -52,7 +53,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       return 'Email invalide (ex: nom@domaine.com)';
     return null;
   }
- 
+
   String? _validatePassword(String? v) {
     if (v == null || v.isEmpty) return 'Mot de passe requis';
     if (v.length < 8) return 'Minimum 8 caractères';
@@ -62,13 +63,13 @@ class _RegisterScreenState extends State<RegisterScreen>
       return 'Au moins un caractère spécial (!@#\$...)';
     return null;
   }
- 
+
   String? _validateConfirmPassword(String? v) {
     if (v == null || v.isEmpty) return 'Confirmation requise';
     if (v != _passwordController.text) return 'Les mots de passe ne correspondent pas';
     return null;
   }
- 
+
   @override
   void initState() {
     super.initState();
@@ -79,7 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _animController.forward();
   }
- 
+
   @override
   void dispose() {
     _animController.dispose();
@@ -98,16 +99,16 @@ class _RegisterScreenState extends State<RegisterScreen>
     _zoneController.dispose();
     super.dispose();
   }
- 
+
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedRole == null) {
       _showError('Veuillez sélectionner un type de compte');
       return;
     }
- 
+
     setState(() => _isLoading = true);
- 
+
     final Map<String, dynamic> userData = {
       'nom': _nomController.text.trim(),
       'prenom': _prenomController.text.trim(),
@@ -116,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       'password': _passwordController.text,
       'role': _selectedRole,
     };
- 
+
     if (_selectedRole == UserRole.medecin) {
       userData['specialite'] = _specialiteController.text.trim();
       userData['numero_licence'] = _licenceController.text.trim();
@@ -133,12 +134,12 @@ class _RegisterScreenState extends State<RegisterScreen>
       userData['vehicle_type'] = _selectedVehicle;
       userData['zone'] = _zoneController.text.trim();
     }
- 
+
     final result = await _authService.register(userData);
     setState(() => _isLoading = false);
- 
+
     if (!mounted) return;
- 
+
     if (result.success) {
       _showSuccess(result.message ?? 'Compte créé ! Vous pouvez vous connecter.');
       Future.delayed(const Duration(seconds: 2), () {
@@ -148,7 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _showError(result.message ?? 'Erreur lors de la création du compte');
     }
   }
- 
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(children: [
@@ -162,7 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       margin: const EdgeInsets.all(16),
     ));
   }
- 
+
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(children: [
@@ -176,7 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       margin: const EdgeInsets.all(16),
     ));
   }
- 
+
   Widget _buildSectionHeader(String title, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -195,10 +196,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       ]),
     );
   }
- 
+
   Widget _buildRoleSpecificFields() {
     if (_selectedRole == null) return const SizedBox.shrink();
- 
+
     switch (_selectedRole) {
       case UserRole.medecin:
         return Column(children: [
@@ -229,23 +230,21 @@ class _RegisterScreenState extends State<RegisterScreen>
             validator: (v) => v == null || v.isEmpty ? 'Lieu de travail requis' : null,
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            label: 'Lien diplôme / document professionnel',
-            hint: 'URL du fichier justificatif',
-            prefixIcon: Icons.description_outlined,
-            controller: _diplomeUrlController,
+          DocumentPickerField(
+            label: 'Diplôme / document professionnel',
+            icon: Icons.description_outlined,
+            urlController: _diplomeUrlController,
             validator: (v) => v == null || v.isEmpty ? 'Document professionnel requis' : null,
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            label: 'Lien pièce d identité',
-            hint: 'URL du document d identité',
-            prefixIcon: Icons.assignment_ind_outlined,
-            controller: _documentIdentiteUrlController,
-            validator: (v) => v == null || v.isEmpty ? 'Pièce d identité requise' : null,
+          DocumentPickerField(
+            label: 'Pièce d\'identité',
+            icon: Icons.assignment_ind_outlined,
+            urlController: _documentIdentiteUrlController,
+            validator: (v) => v == null || v.isEmpty ? 'Pièce d\'identité requise' : null,
           ),
         ]);
- 
+
       case UserRole.pharmacien:
         return Column(children: [
           const SizedBox(height: 16),
@@ -275,23 +274,21 @@ class _RegisterScreenState extends State<RegisterScreen>
             validator: (v) => v == null || v.isEmpty ? 'Adresse requise' : null,
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            label: 'Lien autorisation / diplôme',
-            hint: 'URL du fichier justificatif',
-            prefixIcon: Icons.description_outlined,
-            controller: _diplomeUrlController,
+          DocumentPickerField(
+            label: 'Autorisation / diplôme',
+            icon: Icons.description_outlined,
+            urlController: _diplomeUrlController,
             validator: (v) => v == null || v.isEmpty ? 'Document professionnel requis' : null,
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            label: 'Lien pièce d identité',
-            hint: 'URL du document d identité',
-            prefixIcon: Icons.assignment_ind_outlined,
-            controller: _documentIdentiteUrlController,
-            validator: (v) => v == null || v.isEmpty ? 'Pièce d identité requise' : null,
+          DocumentPickerField(
+            label: 'Pièce d\'identité',
+            icon: Icons.assignment_ind_outlined,
+            urlController: _documentIdentiteUrlController,
+            validator: (v) => v == null || v.isEmpty ? 'Pièce d\'identité requise' : null,
           ),
         ]);
- 
+
       case UserRole.livreur:
         return Column(children: [
           const SizedBox(height: 16),
@@ -340,12 +337,12 @@ class _RegisterScreenState extends State<RegisterScreen>
             validator: (v) => v == null || v.isEmpty ? 'Zone requise' : null,
           ),
         ]);
- 
+
       default:
         return const SizedBox.shrink();
     }
   }
- 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -371,7 +368,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               Text("Remplissez les informations ci-dessous",
                   style: AppTextStyles.body.copyWith(fontSize: 13)),
               const SizedBox(height: 24),
- 
+
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -389,10 +386,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Infos personnelles
                       _buildSectionHeader('Informations personnelles', Icons.person_outline),
                       const SizedBox(height: 16),
- 
+
                       Row(children: [
                         Expanded(
                           child: AppTextField(
@@ -416,9 +412,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                         ),
                       ]),
- 
+
                       const SizedBox(height: 14),
- 
+
                       AppTextField(
                         label: 'Email',
                         hint: 'exemple@email.com',
@@ -427,9 +423,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                         keyboardType: TextInputType.emailAddress,
                         validator: _validateEmail,
                       ),
- 
+
                       const SizedBox(height: 14),
- 
+
                       AppTextField(
                         label: 'Téléphone',
                         hint: '+226 XX XX XX XX',
@@ -439,27 +435,25 @@ class _RegisterScreenState extends State<RegisterScreen>
                         validator: (v) =>
                             v == null || v.isEmpty ? 'Téléphone requis' : null,
                       ),
- 
+
                       const SizedBox(height: 16),
- 
-                      // Type de compte
+
                       _buildSectionHeader('Type de compte', Icons.badge_outlined),
                       const SizedBox(height: 14),
- 
+
                       RoleDropdown(
                         value: _selectedRole,
                         roles: _registerableRoles,
                         onChanged: (v) => setState(() => _selectedRole = v),
                       ),
- 
+
                       _buildRoleSpecificFields(),
- 
+
                       const SizedBox(height: 16),
- 
-                      // Sécurité
+
                       _buildSectionHeader('Sécurité', Icons.lock_outline_rounded),
                       const SizedBox(height: 14),
- 
+
                       AppTextField(
                         label: 'Mot de passe',
                         hint: 'Min. 8 cars, majuscule, chiffre, spécial',
@@ -468,8 +462,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         isPassword: true,
                         validator: _validatePassword,
                       ),
- 
-                      // Indicateur règles en temps réel
+
                       const SizedBox(height: 8),
                       StatefulBuilder(
                         builder: (context, setStateLocal) {
@@ -477,9 +470,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                           return _PasswordRules(password: _passwordController.text);
                         },
                       ),
- 
+
                       const SizedBox(height: 14),
- 
+
                       AppTextField(
                         label: 'Confirmer le mot de passe',
                         hint: 'Répétez le mot de passe',
@@ -488,9 +481,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                         isPassword: true,
                         validator: _validateConfirmPassword,
                       ),
- 
+
                       const SizedBox(height: 24),
- 
+
                       AppButton(
                         text: "Créer mon compte",
                         onPressed: _handleRegister,
@@ -501,9 +494,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ),
               ),
- 
+
               const SizedBox(height: 20),
- 
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -519,7 +512,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ],
               ),
- 
+
               const SizedBox(height: 32),
             ],
           ),
@@ -528,12 +521,12 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 }
- 
+
 // ── Indicateur règles mot de passe ─────────────────────────────────────────
 class _PasswordRules extends StatelessWidget {
   final String password;
   const _PasswordRules({required this.password});
- 
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -547,7 +540,7 @@ class _PasswordRules extends StatelessWidget {
       ],
     );
   }
- 
+
   Widget _rule(String label, bool valid) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -566,4 +559,3 @@ class _PasswordRules extends StatelessWidget {
     );
   }
 }
- 
