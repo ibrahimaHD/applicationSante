@@ -513,6 +513,33 @@ const getOrdonnances = async (req, res) => {
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });
   }
 };
+
+const getDernierMedecinConsulte = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT u.id, u.nom, u.prenom, u.telephone, m.specialite
+       FROM consultations c
+       JOIN utilisateurs u ON u.id = c.medecin_id
+       LEFT JOIN medecins m ON m.utilisateur_id = u.id
+       WHERE c.patient_id = ?
+       ORDER BY c.date_consultation DESC, c.created_at DESC
+       LIMIT 1`,
+      [req.utilisateur.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        succes: false,
+        message: 'Aucun médecin consulté trouvé.',
+      });
+    }
+
+    res.json({ succes: true, medecin: rows[0] });
+  } catch (error) {
+    console.error('getDernierMedecinConsulte:', error);
+    res.status(500).json({ succes: false, message: 'Erreur serveur.' });
+  }
+};
  
 const getInfosPersonnelles = async (req, res) => {
   try {
@@ -568,4 +595,5 @@ module.exports = {
   getGrossesse, creerGrossesse, mettreAJourGrossesse,
   getEnfants, ajouterEnfant, mettreAJourVaccinEnfant,
   getDossierMedical, getExamens, ajouterExamen, getOrdonnances,
+  getDernierMedecinConsulte,
 };

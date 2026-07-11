@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -18,8 +17,7 @@ class ScannerOrdonnanceScreen extends StatefulWidget {
       _ScannerOrdonnanceScreenState();
 }
 
-class _ScannerOrdonnanceScreenState
-    extends State<ScannerOrdonnanceScreen> {
+class _ScannerOrdonnanceScreenState extends State<ScannerOrdonnanceScreen> {
   XFile? _image;
   bool _isUploading = false;
   String? _resultat;
@@ -33,11 +31,10 @@ class _ScannerOrdonnanceScreenState
 
   Future<void> _prendrePhoto(ImageSource source) async {
     final picker = ImagePicker();
-    final picked =
-        await picker.pickImage(source: source, imageQuality: 80);
+    final picked = await picker.pickImage(source: source, imageQuality: 80);
     if (picked != null) {
       setState(() {
-        _image    = picked;
+        _image = picked;
         _resultat = null;
       });
     }
@@ -72,8 +69,7 @@ class _ScannerOrdonnanceScreenState
       request.fields['notes'] = _notesController.text;
 
       final response = await request.send();
-      final body =
-          await response.stream.bytesToString();
+      final body = await response.stream.bytesToString();
       final data = jsonDecode(body);
 
       if (mounted) {
@@ -86,9 +82,8 @@ class _ScannerOrdonnanceScreenState
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(data['message'] ?? ''),
-          backgroundColor: data['succes'] == true
-              ? AppColors.success
-              : AppColors.error,
+          backgroundColor:
+              data['succes'] == true ? AppColors.success : AppColors.error,
         ));
       }
     } catch (e) {
@@ -114,8 +109,8 @@ class _ScannerOrdonnanceScreenState
                 fontSize: 16,
                 fontWeight: FontWeight.w600)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -128,8 +123,8 @@ class _ScannerOrdonnanceScreenState
             decoration: BoxDecoration(
               color: const Color(0xFF8E24AA).withOpacity(0.08),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: const Color(0xFF8E24AA).withOpacity(0.2)),
+              border:
+                  Border.all(color: const Color(0xFF8E24AA).withOpacity(0.2)),
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,9 +178,11 @@ class _ScannerOrdonnanceScreenState
                         future: _image!.readAsBytes(),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(
+                                child: CircularProgressIndicator());
                           }
-                          return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                          return Image.memory(snapshot.data!,
+                              fit: BoxFit.cover);
                         },
                       ),
                     )
@@ -193,13 +190,11 @@ class _ScannerOrdonnanceScreenState
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.add_photo_alternate_outlined,
-                            size: 48,
-                            color: Colors.grey[400]),
+                            size: 48, color: Colors.grey[400]),
                         const SizedBox(height: 12),
                         const Text('Appuyez pour choisir une image',
                             style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 14)),
+                                color: AppColors.textSecondary, fontSize: 14)),
                       ],
                     ),
             ),
@@ -212,13 +207,11 @@ class _ScannerOrdonnanceScreenState
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _prendrePhoto(ImageSource.camera),
-                icon: const Icon(Icons.camera_alt_outlined,
-                    size: 18),
+                icon: const Icon(Icons.camera_alt_outlined, size: 18),
                 label: const Text('Caméra'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF8E24AA),
-                  side: const BorderSide(
-                      color: Color(0xFF8E24AA)),
+                  side: const BorderSide(color: Color(0xFF8E24AA)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -229,13 +222,11 @@ class _ScannerOrdonnanceScreenState
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _prendrePhoto(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library_outlined,
-                    size: 18),
+                icon: const Icon(Icons.photo_library_outlined, size: 18),
                 label: const Text('Galerie'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF8E24AA),
-                  side: const BorderSide(
-                      color: Color(0xFF8E24AA)),
+                  side: const BorderSide(color: Color(0xFF8E24AA)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -273,8 +264,7 @@ class _ScannerOrdonnanceScreenState
               decoration: BoxDecoration(
                 color: AppColors.success.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.success.withOpacity(0.3)),
+                border: Border.all(color: AppColors.success.withOpacity(0.3)),
               ),
               child: Row(children: [
                 const Icon(Icons.check_circle_outline,
@@ -283,8 +273,7 @@ class _ScannerOrdonnanceScreenState
                 Expanded(
                   child: Text(_resultat!,
                       style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.success)),
+                          fontSize: 13, color: AppColors.success)),
                 ),
               ]),
             ),

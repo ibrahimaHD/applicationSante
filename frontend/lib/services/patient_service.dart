@@ -63,6 +63,18 @@ class PatientService {
       return {'succes': false, 'message': 'Erreur: $e'};
     }
   }
+
+  Future<Map<String, dynamic>> getDernierMedecinConsulte() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/patient/dernier-medecin'),
+        headers: await _headers(),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'succes': false, 'message': 'Erreur: $e'};
+    }
+  }
  
   Future<Map<String, dynamic>> majInfosPersonnelles(Map<String, dynamic> data) async {
     try {

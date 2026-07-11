@@ -50,7 +50,11 @@ class _PharmacieScreenState extends State<PharmacieScreen>
 
   Future<Map<String, String>> _headers() async {
     final token = await _getToken();
-    return {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+      'ngrok-skip-browser-warning': 'true',
+    };
   }
 
   double _prix(dynamic value) {
@@ -64,20 +68,38 @@ class _PharmacieScreenState extends State<PharmacieScreen>
       final headers = await _headers();
       String url = '${AppConstants.baseUrl}/pharmacie/medicaments';
       if (_filtreCategorie != null) url += '?categorie=$_filtreCategorie';
-      if (_recherche.isNotEmpty) url += url.contains('?') ? '&search=$_recherche' : '?search=$_recherche';
-      if (_filtrePharmacieId != null) url += url.contains('?') ? '&pharmacie_id=$_filtrePharmacieId' : '?pharmacie_id=$_filtrePharmacieId';
+      if (_recherche.isNotEmpty)
+        url +=
+            url.contains('?') ? '&search=$_recherche' : '?search=$_recherche';
+      if (_filtrePharmacieId != null)
+        url += url.contains('?')
+            ? '&pharmacie_id=$_filtrePharmacieId'
+            : '?pharmacie_id=$_filtrePharmacieId';
 
       final results = await Future.wait([
         http.get(Uri.parse(url), headers: headers),
-        http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/medicaments/categories'), headers: headers),
-        http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/commandes'), headers: headers),
-        http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/pharmacies'), headers: headers),
+        http.get(
+            Uri.parse(
+                '${AppConstants.baseUrl}/pharmacie/medicaments/categories'),
+            headers: headers),
+        http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/commandes'),
+            headers: headers),
+        http.get(Uri.parse('${AppConstants.baseUrl}/pharmacie/pharmacies'),
+            headers: headers),
       ]);
 
-      if (results[0].statusCode == 200) setState(() => _medicaments = jsonDecode(results[0].body)['medicaments'] ?? []);
-      if (results[1].statusCode == 200) setState(() => _categories = List<String>.from(jsonDecode(results[1].body)['categories'] ?? []));
-      if (results[2].statusCode == 200) setState(() => _commandes = jsonDecode(results[2].body)['commandes'] ?? []);
-      if (results[3].statusCode == 200) setState(() => _pharmacies = jsonDecode(results[3].body)['pharmacies'] ?? []);
+      if (results[0].statusCode == 200)
+        setState(() =>
+            _medicaments = jsonDecode(results[0].body)['medicaments'] ?? []);
+      if (results[1].statusCode == 200)
+        setState(() => _categories =
+            List<String>.from(jsonDecode(results[1].body)['categories'] ?? []));
+      if (results[2].statusCode == 200)
+        setState(
+            () => _commandes = jsonDecode(results[2].body)['commandes'] ?? []);
+      if (results[3].statusCode == 200)
+        setState(() =>
+            _pharmacies = jsonDecode(results[3].body)['pharmacies'] ?? []);
     } catch (e) {
       debugPrint('Erreur: $e');
     }
@@ -94,19 +116,20 @@ class _PharmacieScreenState extends State<PharmacieScreen>
       return;
     }
 
-    final index = _panier.indexWhere((p) => p['medicament_id'] == medicament['id']);
+    final index =
+        _panier.indexWhere((p) => p['medicament_id'] == medicament['id']);
     if (index >= 0) {
       setState(() => _panier[index]['quantite']++);
     } else {
       setState(() => _panier.add({
-        'medicament_id': medicament['id'],
-        'pharmacie_id': pharmacieId,
-        'pharmacie_nom': medicament['pharmacie_nom'],
-        'nom': medicament['nom'],
-        'prix': _prix(medicament['prix']),
-        'quantite': 1,
-        'ordonnance_requise': medicament['ordonnance_requise'],
-      }));
+            'medicament_id': medicament['id'],
+            'pharmacie_id': pharmacieId,
+            'pharmacie_nom': medicament['pharmacie_nom'],
+            'nom': medicament['nom'],
+            'prix': _prix(medicament['prix']),
+            'quantite': 1,
+            'ordonnance_requise': medicament['ordonnance_requise'],
+          }));
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('${medicament['nom']} ajouté au panier'),
@@ -115,16 +138,20 @@ class _PharmacieScreenState extends State<PharmacieScreen>
     ));
   }
 
-  double get _totalPanier => _panier.fold(0, (sum, p) => sum + (_prix(p['prix']) * (p['quantite'] as int)));
+  double get _totalPanier => _panier.fold(
+      0, (sum, p) => sum + (_prix(p['prix']) * (p['quantite'] as int)));
 
-  Widget _operatorChoice(String label, String value, String selected, ValueChanged<String> onChanged) {
+  Widget _operatorChoice(String label, String value, String selected,
+      ValueChanged<String> onChanged) {
     final isSelected = value == selected;
     return GestureDetector(
       onTap: () => onChanged(value),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF8E24AA).withOpacity(0.08) : Colors.white,
+          color: isSelected
+              ? const Color(0xFF8E24AA).withOpacity(0.08)
+              : Colors.white,
           border: Border.all(
             color: isSelected ? const Color(0xFF8E24AA) : AppColors.divider,
             width: isSelected ? 2 : 1,
@@ -137,7 +164,9 @@ class _PharmacieScreenState extends State<PharmacieScreen>
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isSelected ? const Color(0xFF8E24AA) : AppColors.textSecondary,
+              color: isSelected
+                  ? const Color(0xFF8E24AA)
+                  : AppColors.textSecondary,
             ),
           ),
         ),
@@ -152,8 +181,6 @@ class _PharmacieScreenState extends State<PharmacieScreen>
     final ordonnanceIdController = TextEditingController();
     final dureeTraitementController = TextEditingController(text: '30');
     String modePaiement = 'mobile_money';
-    String operateurPaiement = 'orange_money';
-    final numeroController = TextEditingController();
     final ordonnanceRequise = _panier.any((p) =>
         p['ordonnance_requise'] == true ||
         p['ordonnance_requise'] == 1 ||
@@ -165,7 +192,8 @@ class _PharmacieScreenState extends State<PharmacieScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
         builder: (context, setStateModal) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: const BoxDecoration(
@@ -173,34 +201,54 @@ class _PharmacieScreenState extends State<PharmacieScreen>
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+              Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 16),
-              const Text('Finaliser la commande', style: AppTextStyles.heading2),
+              const Text('Finaliser la commande',
+                  style: AppTextStyles.heading2),
               const SizedBox(height: 16),
 
               // Résumé panier
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12)),
                 child: Column(children: [
                   ..._panier.map((p) => Row(children: [
-                    Expanded(child: Text('${p['nom']} x${p['quantite']}', style: const TextStyle(fontSize: 13))),
-                    Text('${(_prix(p['prix']) * (p['quantite'] as int)).toStringAsFixed(0)} FCFA',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  ])),
+                        Expanded(
+                            child: Text('${p['nom']} x${p['quantite']}',
+                                style: const TextStyle(fontSize: 13))),
+                        Text(
+                            '${(_prix(p['prix']) * (p['quantite'] as int)).toStringAsFixed(0)} FCFA',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                      ])),
                   const Divider(),
                   Row(children: [
-                    const Text('Total', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    const Text('Total',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
                     const Spacer(),
                     Text('${_totalPanier.toStringAsFixed(0)} FCFA',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary)),
                   ]),
                 ]),
               ),
 
               const SizedBox(height: 12),
-              AppTextField(label: 'Adresse de livraison *', hint: 'Secteur X, Quartier...', prefixIcon: Icons.location_on_outlined, controller: adresseController),
+              AppTextField(
+                  label: 'Adresse de livraison *',
+                  hint: 'Secteur X, Quartier...',
+                  prefixIcon: Icons.location_on_outlined,
+                  controller: adresseController),
               const SizedBox(height: 12),
 
               if (ordonnanceRequise) ...[
@@ -212,7 +260,8 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                     border: Border.all(color: Colors.orange.withOpacity(0.25)),
                   ),
                   child: const Row(children: [
-                    Icon(Icons.receipt_long_outlined, size: 18, color: Colors.orange),
+                    Icon(Icons.receipt_long_outlined,
+                        size: 18, color: Colors.orange),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -242,69 +291,89 @@ class _PharmacieScreenState extends State<PharmacieScreen>
               ],
 
               // Mode paiement
-              const Align(alignment: Alignment.centerLeft, child: Text('Mode de paiement', style: AppTextStyles.label)),
+              const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Mode de paiement', style: AppTextStyles.label)),
               const SizedBox(height: 6),
               Row(children: [
-                Expanded(child: GestureDetector(
-                  onTap: () => setStateModal(() => modePaiement = 'mobile_money'),
+                Expanded(
+                    child: GestureDetector(
+                  onTap: () =>
+                      setStateModal(() => modePaiement = 'mobile_money'),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      border: Border.all(color: modePaiement == 'mobile_money' ? AppColors.primary : AppColors.divider, width: 2),
+                      border: Border.all(
+                          color: modePaiement == 'mobile_money'
+                              ? AppColors.primary
+                              : AppColors.divider,
+                          width: 2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
-                      Icon(Icons.phone_android, color: modePaiement == 'mobile_money' ? AppColors.primary : AppColors.textSecondary),
-                      const Text('Mobile Money', style: TextStyle(fontSize: 11)),
+                      Icon(Icons.phone_android,
+                          color: modePaiement == 'mobile_money'
+                              ? AppColors.primary
+                              : AppColors.textSecondary),
+                      const Text('Mobile Money',
+                          style: TextStyle(fontSize: 11)),
                     ]),
                   ),
                 )),
                 const SizedBox(width: 8),
-                Expanded(child: GestureDetector(
+                Expanded(
+                    child: GestureDetector(
                   onTap: () => setStateModal(() => modePaiement = 'especes'),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      border: Border.all(color: modePaiement == 'especes' ? AppColors.primary : AppColors.divider, width: 2),
+                      border: Border.all(
+                          color: modePaiement == 'especes'
+                              ? AppColors.primary
+                              : AppColors.divider,
+                          width: 2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
-                      Icon(Icons.payments_outlined, color: modePaiement == 'especes' ? AppColors.primary : AppColors.textSecondary),
+                      Icon(Icons.payments_outlined,
+                          color: modePaiement == 'especes'
+                              ? AppColors.primary
+                              : AppColors.textSecondary),
                       const Text('Espèces', style: TextStyle(fontSize: 11)),
                     ]),
                   ),
                 )),
               ]),
 
-              if (modePaiement == 'mobile_money') ...[
-                const SizedBox(height: 12),
-                const Align(alignment: Alignment.centerLeft, child: Text('Opérateur', style: AppTextStyles.label)),
-                const SizedBox(height: 6),
-                Row(children: [
-                  Expanded(child: _operatorChoice('Orange', 'orange_money', operateurPaiement, (v) => setStateModal(() => operateurPaiement = v))),
-                  const SizedBox(width: 6),
-                  Expanded(child: _operatorChoice('Moov', 'moov_money', operateurPaiement, (v) => setStateModal(() => operateurPaiement = v))),
-                  const SizedBox(width: 6),
-                  Expanded(child: _operatorChoice('Coris', 'coris_money', operateurPaiement, (v) => setStateModal(() => operateurPaiement = v))),
-                ]),
-                const SizedBox(height: 12),
-                AppTextField(label: 'Numéro Mobile Money', hint: '+226 XX XX XX XX', prefixIcon: Icons.phone_outlined, controller: numeroController, keyboardType: TextInputType.phone),
-              ],
+              if (modePaiement == 'mobile_money')
+                const Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: Text(
+                    'Le paiement sera demandé après validation de la pharmacie.',
+                    style:
+                        TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
 
               const SizedBox(height: 20),
               AppButton(
-                text: 'Confirmer la commande — ${_totalPanier.toStringAsFixed(0)} FCFA',
+                text:
+                    'Confirmer la commande — ${_totalPanier.toStringAsFixed(0)} FCFA',
                 icon: Icons.shopping_cart_checkout,
                 onPressed: () async {
                   if (adresseController.text.isEmpty) return;
                   Navigator.pop(context);
 
-                  final articles = _panier.map((p) => {
-                    'medicament_id': p['medicament_id'],
-                    'quantite': p['quantite'],
-                  }).toList();
-                  final ordonnanceId = int.tryParse(ordonnanceIdController.text.trim());
-                  final dureeTraitement = int.tryParse(dureeTraitementController.text.trim());
+                  final articles = _panier
+                      .map((p) => {
+                            'medicament_id': p['medicament_id'],
+                            'quantite': p['quantite'],
+                          })
+                      .toList();
+                  final ordonnanceId =
+                      int.tryParse(ordonnanceIdController.text.trim());
+                  final dureeTraitement =
+                      int.tryParse(dureeTraitementController.text.trim());
 
                   final response = await http.post(
                     Uri.parse('${AppConstants.baseUrl}/pharmacie/commandes'),
@@ -314,7 +383,8 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                       'adresse_livraison': adresseController.text,
                       'mode_paiement': modePaiement,
                       if (ordonnanceId != null) 'ordonnance_id': ordonnanceId,
-                      if (dureeTraitement != null) 'duree_traitement_jours': dureeTraitement,
+                      if (dureeTraitement != null)
+                        'duree_traitement_jours': dureeTraitement,
                     }),
                   );
 
@@ -324,23 +394,12 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                       setState(() => _panier.clear());
                       _charger();
                       _tabController.animateTo(1);
-
-                      // Paiement mobile si sélectionné
-                      if (modePaiement == 'mobile_money' && numeroController.text.isNotEmpty) {
-                        await http.post(
-                          Uri.parse('${AppConstants.baseUrl}/pharmacie/paiement'),
-                          headers: await _headers(),
-                          body: jsonEncode({
-                            'commande_id': data['commande_id'],
-                            'numero_mobile': numeroController.text,
-                            'operateur': operateurPaiement,
-                          }),
-                        );
-                      }
                     }
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text(data['message'] ?? ''),
-                      backgroundColor: data['succes'] == true ? AppColors.success : AppColors.error,
+                      backgroundColor: data['succes'] == true
+                          ? AppColors.success
+                          : AppColors.error,
                     ));
                   }
                 },
@@ -353,9 +412,96 @@ class _PharmacieScreenState extends State<PharmacieScreen>
     );
   }
 
+  Future<void> _payerCommande(Map<String, dynamic> commande) async {
+    String operateurPaiement = 'orange_money';
+    final numeroController = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setStateModal) => Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('Paiement Mobile Money',
+                  style: AppTextStyles.heading2),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                    child: _operatorChoice(
+                        'Orange',
+                        'orange_money',
+                        operateurPaiement,
+                        (v) => setStateModal(() => operateurPaiement = v))),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: _operatorChoice(
+                        'Moov',
+                        'moov_money',
+                        operateurPaiement,
+                        (v) => setStateModal(() => operateurPaiement = v))),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: _operatorChoice(
+                        'Coris',
+                        'coris_money',
+                        operateurPaiement,
+                        (v) => setStateModal(() => operateurPaiement = v))),
+              ]),
+              const SizedBox(height: 12),
+              AppTextField(
+                label: 'Numéro Mobile Money',
+                hint: '+226 XX XX XX XX',
+                prefixIcon: Icons.phone_outlined,
+                controller: numeroController,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              AppButton(
+                text: 'Payer ${commande['montant_total']} FCFA',
+                icon: Icons.payments_outlined,
+                onPressed: () async {
+                  if (numeroController.text.trim().isEmpty) return;
+                  Navigator.pop(context);
+                  final response = await http.post(
+                    Uri.parse('${AppConstants.baseUrl}/pharmacie/paiement'),
+                    headers: await _headers(),
+                    body: jsonEncode({
+                      'commande_id': commande['id'],
+                      'numero_mobile': numeroController.text.trim(),
+                      'operateur': operateurPaiement,
+                    }),
+                  );
+                  final data = jsonDecode(response.body);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(data['message'] ?? ''),
+                    backgroundColor: data['succes'] == true
+                        ? AppColors.success
+                        : AppColors.error,
+                  ));
+                  if (data['succes'] == true) _charger();
+                },
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _voirSuivi(int commandeId) async {
     final response = await http.get(
-      Uri.parse('${AppConstants.baseUrl}/pharmacie/commandes/$commandeId/suivi'),
+      Uri.parse(
+          '${AppConstants.baseUrl}/pharmacie/commandes/$commandeId/suivi'),
       headers: await _headers(),
     );
     final data = jsonDecode(response.body);
@@ -374,38 +520,57 @@ class _PharmacieScreenState extends State<PharmacieScreen>
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 16),
           const Text('Suivi de livraison', style: AppTextStyles.heading2),
           const SizedBox(height: 16),
           if (suivi.isEmpty)
-            const Text('Aucun suivi disponible', style: TextStyle(color: AppColors.textSecondary))
+            const Text('Aucun suivi disponible',
+                style: TextStyle(color: AppColors.textSecondary))
           else
             ...suivi.asMap().entries.map((entry) {
               final i = entry.key;
               final s = entry.value;
               final isLast = i == suivi.length - 1;
-              return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Column(children: [
-                  Container(
-                    width: 24, height: 24,
-                    decoration: BoxDecoration(
-                      color: isLast ? AppColors.success : AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(isLast ? Icons.check : Icons.circle, color: Colors.white, size: 14),
-                  ),
-                  if (!isLast) Container(width: 2, height: 40, color: AppColors.divider),
-                ]),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(s['statut'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  if (s['description'] != null)
-                    Text(s['description'], style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  const SizedBox(height: 8),
-                ])),
-              ]);
+              return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isLast ? AppColors.success : AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(isLast ? Icons.check : Icons.circle,
+                            color: Colors.white, size: 14),
+                      ),
+                      if (!isLast)
+                        Container(
+                            width: 2, height: 40, color: AppColors.divider),
+                    ]),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(s['statut'] ?? '',
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                          if (s['description'] != null)
+                            Text(s['description'],
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)),
+                          const SizedBox(height: 8),
+                        ])),
+                  ]);
             }),
           const SizedBox(height: 8),
         ]),
@@ -415,27 +580,43 @@ class _PharmacieScreenState extends State<PharmacieScreen>
 
   Color _statutColor(String statut) {
     switch (statut) {
-      case 'en_attente': return Colors.orange;
-      case 'confirmee': return const Color(0xFF1E88E5);
-      case 'en_preparation': return const Color(0xFF8E24AA);
-      case 'en_livraison': return const Color(0xFFF4511E);
-      case 'livree': return AppColors.success;
-      case 'echouee': return AppColors.error;
-      case 'annulee': return AppColors.error;
-      default: return AppColors.textSecondary;
+      case 'en_attente':
+        return Colors.orange;
+      case 'confirmee':
+        return const Color(0xFF1E88E5);
+      case 'en_preparation':
+        return const Color(0xFF8E24AA);
+      case 'en_livraison':
+        return const Color(0xFFF4511E);
+      case 'livree':
+        return AppColors.success;
+      case 'echouee':
+        return AppColors.error;
+      case 'annulee':
+        return AppColors.error;
+      default:
+        return AppColors.textSecondary;
     }
   }
 
   String _statutLabel(String statut) {
     switch (statut) {
-      case 'en_attente': return 'En attente';
-      case 'confirmee': return 'Confirmée';
-      case 'en_preparation': return 'En préparation';
-      case 'en_livraison': return 'En livraison';
-      case 'livree': return 'Livrée';
-      case 'echouee': return 'Échouée';
-      case 'annulee': return 'Annulée';
-      default: return statut;
+      case 'en_attente':
+        return 'En attente';
+      case 'confirmee':
+        return 'Validation pharmacie';
+      case 'en_preparation':
+        return 'Préparation de la commande';
+      case 'en_livraison':
+        return 'Livreur affecté / en livraison';
+      case 'livree':
+        return 'Livrée';
+      case 'echouee':
+        return 'Échouée';
+      case 'annulee':
+        return 'Annulée';
+      default:
+        return statut;
     }
   }
 
@@ -446,24 +627,37 @@ class _PharmacieScreenState extends State<PharmacieScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF8E24AA),
         title: const Text('Pharmacie en ligne',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           Stack(children: [
             IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+              icon:
+                  const Icon(Icons.shopping_cart_outlined, color: Colors.white),
               onPressed: _panier.isEmpty ? null : _passerCommande,
             ),
             if (_panier.isNotEmpty)
               Positioned(
-                right: 6, top: 6,
+                right: 6,
+                top: 6,
                 child: Container(
-                  width: 18, height: 18,
-                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                  child: Center(child: Text('${_panier.length}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700))),
+                  width: 18,
+                  height: 18,
+                  decoration: const BoxDecoration(
+                      color: Colors.red, shape: BoxShape.circle),
+                  child: Center(
+                      child: Text('${_panier.length}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700))),
                 ),
               ),
           ]),
@@ -494,14 +688,20 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                       // Recherche
                       TextField(
                         controller: _searchController,
-                        onChanged: (v) { _recherche = v; _charger(); },
+                        onChanged: (v) {
+                          _recherche = v;
+                          _charger();
+                        },
                         decoration: InputDecoration(
                           hintText: 'Rechercher un médicament...',
                           prefixIcon: const Icon(Icons.search, size: 20),
                           filled: true,
                           fillColor: AppColors.inputFill,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -514,7 +714,9 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                             ..._pharmacies,
                           ].map((p) {
                             final id = p['id'];
-                            final selected = id == null ? _filtrePharmacieId == null : _filtrePharmacieId == id;
+                            final selected = id == null
+                                ? _filtrePharmacieId == null
+                                : _filtrePharmacieId == id;
                             return GestureDetector(
                               onTap: () => setState(() {
                                 _filtrePharmacieId = id as int?;
@@ -522,20 +724,36 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                               }),
                               child: Container(
                                 margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: selected ? AppColors.primary : Colors.white,
-                                  border: Border.all(color: selected ? AppColors.primary : AppColors.divider),
+                                  color: selected
+                                      ? AppColors.primary
+                                      : Colors.white,
+                                  border: Border.all(
+                                      color: selected
+                                          ? AppColors.primary
+                                          : AppColors.divider),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                  Icon(Icons.local_pharmacy_outlined, size: 14, color: selected ? Colors.white : AppColors.textSecondary),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    p['nom']?.toString() ?? '',
-                                    style: TextStyle(fontSize: 12, color: selected ? Colors.white : AppColors.textSecondary),
-                                  ),
-                                ]),
+                                child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.local_pharmacy_outlined,
+                                          size: 14,
+                                          color: selected
+                                              ? Colors.white
+                                              : AppColors.textSecondary),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        p['nom']?.toString() ?? '',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: selected
+                                                ? Colors.white
+                                                : AppColors.textSecondary),
+                                      ),
+                                    ]),
                               ),
                             );
                           }).toList(),
@@ -546,103 +764,172 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
-                          children: ['Tous', ..._categories].map((c) => GestureDetector(
-                            onTap: () => setState(() {
-                              _filtreCategorie = c == 'Tous' ? null : c;
-                              _charger();
-                            }),
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: (_filtreCategorie == c || (c == 'Tous' && _filtreCategorie == null))
-                                    ? const Color(0xFF8E24AA) : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(c, style: TextStyle(
-                                fontSize: 12,
-                                color: (_filtreCategorie == c || (c == 'Tous' && _filtreCategorie == null))
-                                    ? Colors.white : AppColors.textSecondary,
-                              )),
-                            ),
-                          )).toList(),
+                          children: ['Tous', ..._categories]
+                              .map((c) => GestureDetector(
+                                    onTap: () => setState(() {
+                                      _filtreCategorie = c == 'Tous' ? null : c;
+                                      _charger();
+                                    }),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: (_filtreCategorie == c ||
+                                                (c == 'Tous' &&
+                                                    _filtreCategorie == null))
+                                            ? const Color(0xFF8E24AA)
+                                            : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(c,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: (_filtreCategorie == c ||
+                                                    (c == 'Tous' &&
+                                                        _filtreCategorie ==
+                                                            null))
+                                                ? Colors.white
+                                                : AppColors.textSecondary,
+                                          )),
+                                    ),
+                                  ))
+                              .toList(),
                         ),
                       ),
                     ]),
                   ),
                   Expanded(
                     child: _medicaments.isEmpty
-                        ? const Center(child: Text('Aucun médicament trouvé', style: TextStyle(color: AppColors.textSecondary)))
+                        ? const Center(
+                            child: Text('Aucun médicament trouvé',
+                                style:
+                                    TextStyle(color: AppColors.textSecondary)))
                         : GridView.builder(
                             padding: const EdgeInsets.all(16),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2, childAspectRatio: 0.66, crossAxisSpacing: 12, mainAxisSpacing: 12,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.66,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
                             ),
                             itemCount: _medicaments.length,
                             itemBuilder: (context, index) {
                               final m = _medicaments[index];
-                              final ordonnance = m['ordonnance_requise'] == true || m['ordonnance_requise'] == 1;
+                              final ordonnance =
+                                  m['ordonnance_requise'] == true ||
+                                      m['ordonnance_requise'] == 1;
                               return Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 8)
+                                  ],
                                 ),
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Container(
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF8E24AA).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Center(child: Icon(Icons.medication_outlined, color: Color(0xFF8E24AA), size: 36)),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(m['nom'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 4),
-                                  Text(m['categorie'] ?? '', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                                  const SizedBox(height: 4),
-                                  Row(children: [
-                                    const Icon(Icons.local_pharmacy_outlined, size: 12, color: AppColors.textSecondary),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        m['pharmacie_nom'] ?? 'Pharmacie partenaire',
-                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF8E24AA)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: const Center(
+                                            child: Icon(
+                                                Icons.medication_outlined,
+                                                color: Color(0xFF8E24AA),
+                                                size: 36)),
                                       ),
-                                    ),
-                                  ]),
-                                  if ((m['pharmacie_quartier'] ?? '').toString().isNotEmpty)
-                                    Text(
-                                      m['pharmacie_quartier'].toString(),
-                                      style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  if (ordonnance)
-                                    Container(
-                                      margin: const EdgeInsets.only(top: 4),
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                                      child: const Text('Ordonnance', style: TextStyle(fontSize: 9, color: Colors.orange, fontWeight: FontWeight.w600)),
-                                    ),
-                                  const Spacer(),
-                                  Row(children: [
-                                    Text('${m['prix']} F', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                                    const Spacer(),
-                                    GestureDetector(
-                                      onTap: () => _ajouterAuPanier(m),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: const BoxDecoration(color: Color(0xFF8E24AA), shape: BoxShape.circle),
-                                        child: const Icon(Icons.add, color: Colors.white, size: 16),
-                                      ),
-                                    ),
-                                  ]),
-                                ]),
+                                      const SizedBox(height: 8),
+                                      Text(m['nom'] ?? '',
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 4),
+                                      Text(m['categorie'] ?? '',
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondary)),
+                                      const SizedBox(height: 4),
+                                      Row(children: [
+                                        const Icon(
+                                            Icons.local_pharmacy_outlined,
+                                            size: 12,
+                                            color: AppColors.textSecondary),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            m['pharmacie_nom'] ??
+                                                'Pharmacie partenaire',
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                color: AppColors.textSecondary,
+                                                fontWeight: FontWeight.w600),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ]),
+                                      if ((m['pharmacie_quartier'] ?? '')
+                                          .toString()
+                                          .isNotEmpty)
+                                        Text(
+                                          m['pharmacie_quartier'].toString(),
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              color: AppColors.textSecondary),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      if (ordonnance)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                              color: Colors.orange
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(6)),
+                                          child: const Text('Ordonnance',
+                                              style: TextStyle(
+                                                  fontSize: 9,
+                                                  color: Colors.orange,
+                                                  fontWeight: FontWeight.w600)),
+                                        ),
+                                      const Spacer(),
+                                      Row(children: [
+                                        Text('${m['prix']} F',
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.primary)),
+                                        const Spacer(),
+                                        GestureDetector(
+                                          onTap: () => _ajouterAuPanier(m),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: const BoxDecoration(
+                                                color: Color(0xFF8E24AA),
+                                                shape: BoxShape.circle),
+                                            child: const Icon(Icons.add,
+                                                color: Colors.white, size: 16),
+                                          ),
+                                        ),
+                                      ]),
+                                    ]),
                               );
                             },
                           ),
@@ -655,10 +942,15 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                   child: _commandes.isEmpty
                       ? ListView(children: const [
                           SizedBox(height: 10),
-                          Center(child: Column(children: [
-                            Icon(Icons.shopping_bag_outlined, size: 4, color: Colors.grey),
+                          Center(
+                              child: Column(children: [
+                            Icon(Icons.shopping_bag_outlined,
+                                size: 4, color: Colors.grey),
                             SizedBox(height: 5),
-                            Text('Aucune commande', style: TextStyle(color: AppColors.textSecondary, fontSize: 16)),
+                            Text('Aucune commande',
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 16)),
                           ])),
                         ])
                       : ListView.builder(
@@ -667,6 +959,17 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                           itemBuilder: (context, index) {
                             final c = _commandes[index];
                             final statut = c['statut'] ?? 'en_attente';
+                            final paiementEnAttente =
+                                c['mode_paiement'] == 'mobile_money' &&
+                                    (c['statut_paiement'] ?? 'en_attente') !=
+                                        'paye' &&
+                                    [
+                                      'confirmee',
+                                      'en_preparation',
+                                      'en_livraison'
+                                    ].contains(statut);
+                            final numeroCommande =
+                                'CMD-${DateTime.now().year}${c['id'].toString().padLeft(5, '0')}';
                             final color = _statutColor(statut);
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -674,85 +977,173 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: color.withOpacity(0.3)),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
-                              ),
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Row(children: [
-                                  Text('Commande #${c['id']}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                                  const Spacer(),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                                    child: Text(_statutLabel(statut), style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
-                                  ),
-                                ]),
-                                const SizedBox(height: 8),
-                                Text('${c['montant_total']} FCFA', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                                Text(c['created_at']?.toString().substring(0, 10) ?? '', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                // Articles
-                                if (c['articles'] != null) ...[
-                                  const Divider(height: 16),
-                                  ...(c['articles'] as List).take(3).map((a) => Text(
-                                    '• ${a['medicament_nom']} x${a['quantite']}',
-                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                  )),
+                                border:
+                                    Border.all(color: color.withOpacity(0.3)),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 8)
                                 ],
-                                const SizedBox(height: 12),
-                                Row(children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: () {
-                                        if (statut == 'en_livraison') {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => SuiviGpsScreen(commandeId: c['id']),
-                                            ),
-                                          );
-                                        } else {
-                                          _voirSuivi(c['id']);
-                                        }
-                                      },
-                                      icon: Icon(statut == 'en_livraison' ? Icons.map_outlined : Icons.local_shipping_outlined, size: 16),
-                                      label: Text(statut == 'en_livraison' ? 'GPS' : 'Suivi', style: const TextStyle(fontSize: 12)),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: color,
-                                        side: BorderSide(color: color),
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(children: [
+                                      Text(numeroCommande,
+                                          style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textPrimary)),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                            color: color.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(20)),
+                                        child: Text(_statutLabel(statut),
+                                            style: TextStyle(
+                                                fontSize: 11,
+                                                color: color,
+                                                fontWeight: FontWeight.w600)),
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () async {
-                                        final response = await http.post(
-                                          Uri.parse('${AppConstants.baseUrl}/pharmacie/commandes/${c['id']}/renouveler'),
-                                          headers: await _headers(),
-                                        );
-                                        final data = jsonDecode(response.body);
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                            content: Text(data['message'] ?? ''),
-                                            backgroundColor: data['succes'] == true ? AppColors.success : AppColors.error,
-                                          ));
-                                          if (data['succes'] == true) _charger();
-                                        }
-                                      },
-                                      icon: const Icon(Icons.refresh, size: 16),
-                                      label: const Text('Renouveler', style: TextStyle(fontSize: 12)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF8E24AA),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ]),
+                                    const SizedBox(height: 8),
+                                    Text('${c['montant_total']} FCFA',
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primary)),
+                                    Text(
+                                        c['created_at']
+                                                ?.toString()
+                                                .substring(0, 10) ??
+                                            '',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textSecondary)),
+                                    // Articles
+                                    if (c['articles'] != null) ...[
+                                      const Divider(height: 16),
+                                      ...(c['articles'] as List)
+                                          .take(3)
+                                          .map((a) => Text(
+                                                '• ${a['medicament_nom']} x${a['quantite']}',
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: AppColors
+                                                        .textSecondary),
+                                              )),
+                                    ],
+                                    const SizedBox(height: 12),
+                                    if (paiementEnAttente) ...[
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () => _payerCommande(
+                                              Map<String, dynamic>.from(c)),
+                                          icon: const Icon(
+                                              Icons.payments_outlined,
+                                              size: 16),
+                                          label: const Text('Payer maintenant',
+                                              style: TextStyle(fontSize: 12)),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.success,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 9),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10)),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ]),
-                              ]),
+                                      const SizedBox(height: 8),
+                                    ],
+                                    Row(children: [
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            if (statut == 'en_livraison') {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      SuiviGpsScreen(
+                                                          commandeId: c['id']),
+                                                ),
+                                              );
+                                            } else {
+                                              _voirSuivi(c['id']);
+                                            }
+                                          },
+                                          icon: Icon(
+                                              statut == 'en_livraison'
+                                                  ? Icons.map_outlined
+                                                  : Icons
+                                                      .local_shipping_outlined,
+                                              size: 16),
+                                          label: Text(
+                                              statut == 'en_livraison'
+                                                  ? 'GPS'
+                                                  : 'Suivi',
+                                              style: const TextStyle(
+                                                  fontSize: 12)),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: color,
+                                            side: BorderSide(color: color),
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 8),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10)),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () async {
+                                            final response = await http.post(
+                                              Uri.parse(
+                                                  '${AppConstants.baseUrl}/pharmacie/commandes/${c['id']}/renouveler'),
+                                              headers: await _headers(),
+                                            );
+                                            final data =
+                                                jsonDecode(response.body);
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                content:
+                                                    Text(data['message'] ?? ''),
+                                                backgroundColor:
+                                                    data['succes'] == true
+                                                        ? AppColors.success
+                                                        : AppColors.error,
+                                              ));
+                                              if (data['succes'] == true)
+                                                _charger();
+                                            }
+                                          },
+                                          icon: const Icon(Icons.refresh,
+                                              size: 16),
+                                          label: const Text('Renouveler',
+                                              style: TextStyle(fontSize: 12)),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                const Color(0xFF8E24AA),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 8),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10)),
+                                          ),
+                                        ),
+                                      ),
+                                    ]),
+                                  ]),
                             );
                           },
                         ),
@@ -760,19 +1151,32 @@ class _PharmacieScreenState extends State<PharmacieScreen>
 
                 // ── Panier ────────────────────────────────────────────
                 _panier.isEmpty
-                    ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey[300]),
-                        const SizedBox(height: 16),
-                        const Text('Votre panier est vide', style: TextStyle(color: AppColors.textSecondary, fontSize: 16)),
-                        const SizedBox(height: 8),
-                        const Text('Ajoutez des médicaments depuis le catalogue', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () => _tabController.animateTo(0),
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8E24AA), foregroundColor: Colors.white),
-                          child: const Text('Voir le catalogue'),
-                        ),
-                      ]))
+                    ? Center(
+                        child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                            Icon(Icons.shopping_cart_outlined,
+                                size: 64, color: Colors.grey[300]),
+                            const SizedBox(height: 16),
+                            const Text('Votre panier est vide',
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 16)),
+                            const SizedBox(height: 8),
+                            const Text(
+                                'Ajoutez des médicaments depuis le catalogue',
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13)),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: () => _tabController.animateTo(0),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF8E24AA),
+                                  foregroundColor: Colors.white),
+                              child: const Text('Voir le catalogue'),
+                            ),
+                          ]))
                     : Column(children: [
                         Expanded(
                           child: ListView.builder(
@@ -786,39 +1190,73 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)],
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 6)
+                                  ],
                                 ),
                                 child: Row(children: [
                                   Container(
-                                    width: 44, height: 44,
-                                    decoration: BoxDecoration(color: const Color(0xFF8E24AA).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                                    child: const Icon(Icons.medication_outlined, color: Color(0xFF8E24AA), size: 22),
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                        color: const Color(0xFF8E24AA)
+                                            .withOpacity(0.1),
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                    child: const Icon(Icons.medication_outlined,
+                                        color: Color(0xFF8E24AA), size: 22),
                                   ),
                                   const SizedBox(width: 12),
-                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Text(p['nom'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                                    if ((p['pharmacie_nom'] ?? '').toString().isNotEmpty)
-                                      Text(
-                                        p['pharmacie_nom'],
-                                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    Text('${p['prix']} FCFA / unité', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                  ])),
+                                  Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                        Text(p['nom'],
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600)),
+                                        if ((p['pharmacie_nom'] ?? '')
+                                            .toString()
+                                            .isNotEmpty)
+                                          Text(
+                                            p['pharmacie_nom'],
+                                            style: const TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        Text('${p['prix']} FCFA / unité',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color:
+                                                    AppColors.textSecondary)),
+                                      ])),
                                   Row(children: [
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, size: 20),
+                                      icon: const Icon(
+                                          Icons.remove_circle_outline,
+                                          size: 20),
                                       onPressed: () => setState(() {
-                                        if (p['quantite'] > 1) p['quantite']--;
-                                        else _panier.removeAt(index);
+                                        if (p['quantite'] > 1)
+                                          p['quantite']--;
+                                        else
+                                          _panier.removeAt(index);
                                       }),
                                       color: AppColors.error,
                                     ),
-                                    Text('${p['quantite']}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                    Text('${p['quantite']}',
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700)),
                                     IconButton(
-                                      icon: const Icon(Icons.add_circle_outline, size: 20),
-                                      onPressed: () => setState(() => p['quantite']++),
+                                      icon: const Icon(Icons.add_circle_outline,
+                                          size: 20),
+                                      onPressed: () =>
+                                          setState(() => p['quantite']++),
                                       color: AppColors.success,
                                     ),
                                   ]),
@@ -832,14 +1270,21 @@ class _PharmacieScreenState extends State<PharmacieScreen>
                           color: Colors.white,
                           child: Column(children: [
                             Row(children: [
-                              const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                              const Text('Total',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700)),
                               const Spacer(),
                               Text('${_totalPanier.toStringAsFixed(0)} FCFA',
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary)),
                             ]),
                             const SizedBox(height: 12),
                             AppButton(
-                              text: 'Commander — ${_totalPanier.toStringAsFixed(0)} FCFA',
+                              text:
+                                  'Commander — ${_totalPanier.toStringAsFixed(0)} FCFA',
                               icon: Icons.shopping_cart_checkout,
                               color: const Color(0xFF8E24AA),
                               onPressed: _passerCommande,

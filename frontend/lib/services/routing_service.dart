@@ -6,9 +6,11 @@ class RoutingService {
       'https://maps.googleapis.com/maps/api/directions/json';
   static const String _orsBaseUrl =
       'https://api.openrouteservice.org/v2/directions/driving-car';
-  static const String _osrmBaseUrl = 'https://router.project-osrm.org/route/v1/driving';
+  static const String _osrmBaseUrl =
+      'https://router.project-osrm.org/route/v1/driving';
   static const String _apiKey = String.fromEnvironment('ORS_API_KEY');
-  static const String _googleMapsApiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+  static const String _googleMapsApiKey =
+      String.fromEnvironment('GOOGLE_MAPS_API_KEY');
 
   static Future<List<List<double>>?> getItineraire({
     required double startLat,
@@ -92,11 +94,9 @@ class RoutingService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final coords = data['routes'][0]['geometry']['coordinates']
-            as List;
+        final coords = data['routes'][0]['geometry']['coordinates'] as List;
         return coords
-            .map<List<double>>((c) =>
-                [c[1].toDouble(), c[0].toDouble()])
+            .map<List<double>>((c) => [c[1].toDouble(), c[0].toDouble()])
             .toList();
       }
     } catch (e) {
@@ -112,7 +112,8 @@ class RoutingService {
     required double endLng,
   }) async {
     try {
-      final url = '$_osrmBaseUrl/$startLng,$startLat;$endLng,$endLat?overview=full&geometries=geojson';
+      final url =
+          '$_osrmBaseUrl/$startLng,$startLat;$endLng,$endLat?overview=full&geometries=geojson';
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -135,9 +136,14 @@ class RoutingService {
     const R = 6371.0;
     final dLat = _rad(lat2 - lat1);
     final dLng = _rad(lng2 - lng1);
-    final a = (dLat / 2) * (dLat / 2) +
-        (dLng / 2) * (dLng / 2);
-    return R * 2 * (a < 0 ? 0 : a > 1 ? 1 : a);
+    final a = (dLat / 2) * (dLat / 2) + (dLng / 2) * (dLng / 2);
+    return R *
+        2 *
+        (a < 0
+            ? 0
+            : a > 1
+                ? 1
+                : a);
   }
 
   static int estimerDureeMinutes(double distanceKm) {

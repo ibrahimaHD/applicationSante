@@ -151,6 +151,38 @@ CORIS_MERCHANT_ID=ton_identifiant_marchand_coris
 
 ---
 
+## Google Maps pour les itinéraires
+
+Le frontend utilise Google Directions API si une clé est fournie au build.
+Sinon il garde OSRM en secours pour le développement.
+
+Exemple de build web :
+
+```bash
+flutter build web --dart-define=GOOGLE_MAPS_API_KEY=ta_cle_google_maps
+```
+
+Active au minimum dans Google Cloud :
+
+1. Directions API
+2. Maps JavaScript API si tu veux aussi afficher les tuiles Google plus tard
+3. Billing sur le projet Google Cloud
+
+---
+
+## Validation des professionnels
+
+À l'inscription, les rôles `medecin`, `pharmacien` et `livreur` envoient des fichiers réels :
+
+- diplôme ou autorisation professionnelle ;
+- pièce d'identité ;
+- permis/document livreur pour les livreurs.
+
+Formats acceptés : `PDF`, `JPG`, `PNG`, maximum 8 MB par fichier.
+Les comptes restent inactifs jusqu'à validation dans l'écran admin.
+
+---
+
 ## 📱 Connexion avec Flutter
 
 Dans Flutter, utilise le package `http` ou `dio`. Voici un exemple :

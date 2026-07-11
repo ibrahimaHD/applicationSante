@@ -9,6 +9,23 @@ const getPharmacienId = async (utilisateurId) => {
   return rows[0]?.id || null;
 };
 
+const choisirLivreurDisponible = async () => {
+  const [rows] = await db.query(
+    `SELECT u.id
+     FROM utilisateurs u
+     JOIN livreurs l ON u.id = l.utilisateur_id
+     LEFT JOIN commandes c
+       ON c.livreur_id = u.id
+      AND c.statut IN ('en_livraison', 'confirmee', 'en_preparation')
+     WHERE u.est_actif = TRUE
+       AND l.disponible = TRUE
+     GROUP BY u.id
+     ORDER BY COUNT(c.id) ASC, u.id ASC
+     LIMIT 1`
+  );
+  return rows[0]?.id || null;
+};
+
 // ── PROFIL ───────────────────────────────────────────────────────────
 const getMonProfil = async (req, res) => {
   try {
@@ -84,7 +101,7 @@ const ajouterMedicament = async (req, res) => {
       return res.status(400).json({ succes: false, message: 'Nom et prix requis.' });
     }
     await db.query(
-      `INSERT INTO medicaments (nom, description, categorie, prix, stock, ordonnance_requise, dosage, est_actif)
+      `INSERT INTO medicaments (nom, description, categorie, prix, stock, ordonnance_requise, dosage, est_actif, disponible_livraison)
        VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
       [nom, description || null, categorie || 'Général', prix, stock || 0,
        ordonnance_requise ? 1 : 0, dosage || null]
@@ -166,16 +183,27 @@ const majStatutCommande = async (req, res) => {
     const updates = ['statut = ?'];
     const params  = [statut];
 
-    if (livreur_id) { updates.push('livreur_id = ?'); params.push(livreur_id); }
+    let livreurAssigne = livreur_id || null;
+    if (statut === 'en_livraison' && !livreurAssigne) {
+      livreurAssigne = await choisirLivreurDisponible();
+      if (!livreurAssigne) {
+        return res.status(400).json({
+          succes: false,
+          message: 'Aucun livreur disponible pour le moment.',
+        });
+      }
+    }
+
+    if (livreurAssigne) { updates.push('livreur_id = ?'); params.push(livreurAssigne); }
     params.push(req.params.id);
 
     await db.query(`UPDATE commandes SET ${updates.join(', ')} WHERE id = ?`, params);
 
     // Ajouter au suivi
     const messages = {
-      confirmee:      'Commande confirmée par la pharmacie',
-      en_preparation: 'Commande en cours de préparation',
-      en_livraison:   'Commande en cours de livraison',
+      confirmee:      'Validation pharmacie',
+      en_preparation: 'Préparation de la commande',
+      en_livraison:   livreurAssigne ? 'Livreur affecté - commande prête à être récupérée' : 'Commande en cours de livraison',
       livree:         'Commande livrée avec succès',
       annulee:        'Commande annulée par la pharmacie',
     };
@@ -184,7 +212,20 @@ const majStatutCommande = async (req, res) => {
       [req.params.id, messages[statut] || statut, messages[statut] || '']
     );
 
-    res.json({ succes: true, message: `Commande ${statut} !` });
+    if (livreurAssigne) {
+      await db.query(
+        'UPDATE livreurs SET disponible = FALSE WHERE utilisateur_id = ?',
+        [livreurAssigne]
+      );
+    }
+
+    res.json({
+      succes: true,
+      message: livreurAssigne
+        ? 'Commande prête. Un livreur disponible a été affecté automatiquement.'
+        : `Commande ${statut} !`,
+      livreur_id: livreurAssigne,
+    });
   } catch (e) {
     console.error('majStatutCommande:', e);
     res.status(500).json({ succes: false, message: 'Erreur serveur.' });

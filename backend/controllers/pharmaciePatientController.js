@@ -284,12 +284,18 @@ const payerCommande = async (req, res) => {
     }
 
     const [commandes] = await db.query(
-      'SELECT id, montant_total FROM commandes WHERE id = ? AND patient_id = ?',
+      'SELECT id, montant_total, statut FROM commandes WHERE id = ? AND patient_id = ?',
       [commande_id, req.utilisateur.id]
     );
 
     if (commandes.length === 0) {
       return res.status(404).json({ succes: false, message: 'Commande introuvable.' });
+    }
+    if (commandes[0].statut === 'en_attente') {
+      return res.status(400).json({
+        succes: false,
+        message: 'La pharmacie doit valider la commande avant le paiement.',
+      });
     }
 
     const methode = ['orange_money', 'moov_money', 'coris_money'].includes(operateur)

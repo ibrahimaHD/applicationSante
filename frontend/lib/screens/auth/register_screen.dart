@@ -66,7 +66,8 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   String? _validateConfirmPassword(String? v) {
     if (v == null || v.isEmpty) return 'Confirmation requise';
-    if (v != _passwordController.text) return 'Les mots de passe ne correspondent pas';
+    if (v != _passwordController.text)
+      return 'Les mots de passe ne correspondent pas';
     return null;
   }
 
@@ -123,13 +124,15 @@ class _RegisterScreenState extends State<RegisterScreen>
       userData['numero_licence'] = _licenceController.text.trim();
       userData['hopital_clinique'] = _lieuTravailController.text.trim();
       userData['diplome_url'] = _diplomeUrlController.text.trim();
-      userData['document_identite_url'] = _documentIdentiteUrlController.text.trim();
+      userData['document_identite_url'] =
+          _documentIdentiteUrlController.text.trim();
     } else if (_selectedRole == UserRole.pharmacien) {
       userData['nom_pharmacie'] = _pharmacieController.text.trim();
       userData['numero_licence'] = _licenceController.text.trim();
       userData['adresse_pharmacie'] = _lieuTravailController.text.trim();
       userData['diplome_url'] = _diplomeUrlController.text.trim();
-      userData['document_identite_url'] = _documentIdentiteUrlController.text.trim();
+      userData['document_identite_url'] =
+          _documentIdentiteUrlController.text.trim();
     } else if (_selectedRole == UserRole.livreur) {
       userData['vehicle_type'] = _selectedVehicle;
       userData['zone'] = _zoneController.text.trim();
@@ -141,7 +144,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (!mounted) return;
 
     if (result.success) {
-      _showSuccess(result.message ?? 'Compte créé ! Vous pouvez vous connecter.');
+      _showSuccess(
+          result.message ?? 'Compte créé ! Vous pouvez vous connecter.');
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) Navigator.pop(context);
       });
@@ -204,14 +208,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       case UserRole.medecin:
         return Column(children: [
           const SizedBox(height: 16),
-          _buildSectionHeader('Informations médicales', Icons.local_hospital_outlined),
+          _buildSectionHeader(
+              'Informations médicales', Icons.local_hospital_outlined),
           const SizedBox(height: 14),
           AppTextField(
             label: 'Spécialité',
             hint: 'Ex: Cardiologie, Pédiatrie...',
             prefixIcon: Icons.medical_services_outlined,
             controller: _specialiteController,
-            validator: (v) => v == null || v.isEmpty ? 'Spécialité requise' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Spécialité requise' : null,
           ),
           const SizedBox(height: 14),
           AppTextField(
@@ -219,7 +225,8 @@ class _RegisterScreenState extends State<RegisterScreen>
             hint: 'N° CNOM / Ordre des médecins',
             prefixIcon: Icons.badge_outlined,
             controller: _licenceController,
-            validator: (v) => v == null || v.isEmpty ? 'Numéro de licence requis' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Numéro de licence requis' : null,
           ),
           const SizedBox(height: 14),
           AppTextField(
@@ -227,35 +234,40 @@ class _RegisterScreenState extends State<RegisterScreen>
             hint: 'Hôpital, clinique ou cabinet',
             prefixIcon: Icons.business_outlined,
             controller: _lieuTravailController,
-            validator: (v) => v == null || v.isEmpty ? 'Lieu de travail requis' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Lieu de travail requis' : null,
           ),
           const SizedBox(height: 14),
           DocumentPickerField(
             label: 'Diplôme / document professionnel',
             icon: Icons.description_outlined,
             urlController: _diplomeUrlController,
-            validator: (v) => v == null || v.isEmpty ? 'Document professionnel requis' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Document professionnel requis' : null,
           ),
           const SizedBox(height: 14),
           DocumentPickerField(
             label: 'Pièce d\'identité',
             icon: Icons.assignment_ind_outlined,
             urlController: _documentIdentiteUrlController,
-            validator: (v) => v == null || v.isEmpty ? 'Pièce d\'identité requise' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Pièce d\'identité requise' : null,
           ),
         ]);
 
       case UserRole.pharmacien:
         return Column(children: [
           const SizedBox(height: 16),
-          _buildSectionHeader('Informations pharmacie', Icons.medication_outlined),
+          _buildSectionHeader(
+              'Informations pharmacie', Icons.medication_outlined),
           const SizedBox(height: 14),
           AppTextField(
             label: 'Nom de la pharmacie',
             hint: 'Ex: Pharmacie Centrale...',
             prefixIcon: Icons.store_outlined,
             controller: _pharmacieController,
-            validator: (v) => v == null || v.isEmpty ? 'Nom de pharmacie requis' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Nom de pharmacie requis' : null,
           ),
           const SizedBox(height: 14),
           AppTextField(
@@ -263,7 +275,8 @@ class _RegisterScreenState extends State<RegisterScreen>
             hint: 'Numéro autorisation exploitation',
             prefixIcon: Icons.badge_outlined,
             controller: _licenceController,
-            validator: (v) => v == null || v.isEmpty ? 'Numéro de licence requis' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Numéro de licence requis' : null,
           ),
           const SizedBox(height: 14),
           AppTextField(
@@ -278,21 +291,24 @@ class _RegisterScreenState extends State<RegisterScreen>
             label: 'Autorisation / diplôme',
             icon: Icons.description_outlined,
             urlController: _diplomeUrlController,
-            validator: (v) => v == null || v.isEmpty ? 'Document professionnel requis' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Document professionnel requis' : null,
           ),
           const SizedBox(height: 14),
           DocumentPickerField(
             label: 'Pièce d\'identité',
             icon: Icons.assignment_ind_outlined,
             urlController: _documentIdentiteUrlController,
-            validator: (v) => v == null || v.isEmpty ? 'Pièce d\'identité requise' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Pièce d\'identité requise' : null,
           ),
         ]);
 
       case UserRole.livreur:
         return Column(children: [
           const SizedBox(height: 16),
-          _buildSectionHeader('Informations livraison', Icons.delivery_dining_outlined),
+          _buildSectionHeader(
+              'Informations livraison', Icons.delivery_dining_outlined),
           const SizedBox(height: 14),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Type de véhicule', style: AppTextStyles.label),
@@ -300,7 +316,8 @@ class _RegisterScreenState extends State<RegisterScreen>
             DropdownButtonFormField<String>(
               value: _selectedVehicle,
               onChanged: (v) => setState(() => _selectedVehicle = v),
-              validator: (v) => v == null ? 'Veuillez sélectionner un véhicule' : null,
+              validator: (v) =>
+                  v == null ? 'Veuillez sélectionner un véhicule' : null,
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.two_wheeler_outlined,
                     color: AppColors.primary, size: 20),
@@ -311,11 +328,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                     borderSide: BorderSide.none),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.divider, width: 1)),
+                    borderSide:
+                        const BorderSide(color: AppColors.divider, width: 1)),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 1.5)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               style: const TextStyle(
                   fontSize: 15,
@@ -368,7 +388,6 @@ class _RegisterScreenState extends State<RegisterScreen>
               Text("Remplissez les informations ci-dessous",
                   style: AppTextStyles.body.copyWith(fontSize: 13)),
               const SizedBox(height: 24),
-
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -386,9 +405,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader('Informations personnelles', Icons.person_outline),
+                      _buildSectionHeader(
+                          'Informations personnelles', Icons.person_outline),
                       const SizedBox(height: 16),
-
                       Row(children: [
                         Expanded(
                           child: AppTextField(
@@ -412,9 +431,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                         ),
                       ]),
-
                       const SizedBox(height: 14),
-
                       AppTextField(
                         label: 'Email',
                         hint: 'exemple@email.com',
@@ -423,9 +440,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         keyboardType: TextInputType.emailAddress,
                         validator: _validateEmail,
                       ),
-
                       const SizedBox(height: 14),
-
                       AppTextField(
                         label: 'Téléphone',
                         hint: '+226 XX XX XX XX',
@@ -435,25 +450,20 @@ class _RegisterScreenState extends State<RegisterScreen>
                         validator: (v) =>
                             v == null || v.isEmpty ? 'Téléphone requis' : null,
                       ),
-
                       const SizedBox(height: 16),
-
-                      _buildSectionHeader('Type de compte', Icons.badge_outlined),
+                      _buildSectionHeader(
+                          'Type de compte', Icons.badge_outlined),
                       const SizedBox(height: 14),
-
                       RoleDropdown(
                         value: _selectedRole,
                         roles: _registerableRoles,
                         onChanged: (v) => setState(() => _selectedRole = v),
                       ),
-
                       _buildRoleSpecificFields(),
-
                       const SizedBox(height: 16),
-
-                      _buildSectionHeader('Sécurité', Icons.lock_outline_rounded),
+                      _buildSectionHeader(
+                          'Sécurité', Icons.lock_outline_rounded),
                       const SizedBox(height: 14),
-
                       AppTextField(
                         label: 'Mot de passe',
                         hint: 'Min. 8 cars, majuscule, chiffre, spécial',
@@ -462,17 +472,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                         isPassword: true,
                         validator: _validatePassword,
                       ),
-
                       const SizedBox(height: 8),
                       StatefulBuilder(
                         builder: (context, setStateLocal) {
-                          _passwordController.addListener(() => setStateLocal(() {}));
-                          return _PasswordRules(password: _passwordController.text);
+                          _passwordController
+                              .addListener(() => setStateLocal(() {}));
+                          return _PasswordRules(
+                              password: _passwordController.text);
                         },
                       ),
-
                       const SizedBox(height: 14),
-
                       AppTextField(
                         label: 'Confirmer le mot de passe',
                         hint: 'Répétez le mot de passe',
@@ -481,9 +490,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         isPassword: true,
                         validator: _validateConfirmPassword,
                       ),
-
                       const SizedBox(height: 24),
-
                       AppButton(
                         text: "Créer mon compte",
                         onPressed: _handleRegister,
@@ -494,9 +501,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -512,7 +517,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ],
               ),
-
               const SizedBox(height: 32),
             ],
           ),

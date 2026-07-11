@@ -100,14 +100,20 @@ class _GestionUtilisateursScreenState
     setState(() => _isLoading = true);
     try {
       final headers = await _headers();
+      debugPrint('🔑 Headers envoyés: $headers');
+
       final response = await http.get(
         Uri.parse('${AppConstants.baseUrl}/admin/utilisateurs'),
         headers: headers,
       );
+      debugPrint('👥 /admin/utilisateurs → status: ${response.statusCode} | body: ${response.body}');
+
       final validationsResponse = await http.get(
         Uri.parse('${AppConstants.baseUrl}/admin/validations-professionnels'),
         headers: headers,
       );
+      debugPrint('📋 /admin/validations-professionnels → status: ${validationsResponse.statusCode} | body: ${validationsResponse.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -120,7 +126,7 @@ class _GestionUtilisateursScreenState
         setState(() => _validations = data['demandes'] ?? []);
       }
     } catch (e) {
-      debugPrint('Erreur: $e');
+      debugPrint('❌ Erreur _charger: $e');
     }
     setState(() => _isLoading = false);
   }

@@ -11,6 +11,7 @@ const {
   getGrossesse, creerGrossesse, mettreAJourGrossesse,
   getEnfants, ajouterEnfant, mettreAJourVaccinEnfant,
   getDossierMedical, getExamens, ajouterExamen, getOrdonnances,
+  getDernierMedecinConsulte,
 } = require('../controllers/patientController');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
 const { getResultats, supprimerResultat, getAudits } = require('../controllers/resultatsController');
@@ -125,6 +126,7 @@ router.get('/ordonnances', getOrdonnances);
 // Informations personnelles
 router.get('/infos-personnelles', getInfosPersonnelles);
 router.put('/infos-personnelles', majInfosPersonnelles);
+router.get('/dernier-medecin', getDernierMedecinConsulte);
  
 
 router.get('/resultats', getResultats);

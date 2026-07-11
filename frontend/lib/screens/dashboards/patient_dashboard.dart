@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import '../../services/patient_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'base_dashboard.dart';
 import '../patient/profil_medical_screen.dart';
 import '../patient/carnet_sante_screen.dart';
@@ -12,7 +13,6 @@ import '../patient/vaccinations_enfants_screen.dart';
 import '../patient/dossier_medical_screen.dart';
 import '../patient/informations_personnelles_screen.dart';
 import '../patient/rendez_vous_screen.dart';
-import '../patient/resultats_medicaux_screen.dart';
 import '../patient/audit_acces_screen.dart';
 import '../patient/cartographie_screen.dart';
 import '../patient/pharmacie_screen.dart';
@@ -51,6 +51,51 @@ class _PatientDashboardState extends State<PatientDashboard> {
   }
 
   UserModel get _user => _userMaj ?? widget.user;
+
+  Future<void> _contacterDernierMedecin() async {
+    final result = await _service.getDernierMedecinConsulte();
+    if (!mounted) return;
+    if (result['succes'] != true || result['medecin'] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result['message'] ?? 'Aucun médecin à contacter.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    final medecin = result['medecin'];
+    final phone =
+        _normaliserTelephoneWhatsApp(medecin['telephone']?.toString() ?? '');
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Le médecin n a pas de numéro WhatsApp renseigné.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    final nom = 'Dr. ${medecin['prenom'] ?? ''} ${medecin['nom'] ?? ''}'.trim();
+    final message = Uri.encodeComponent(
+      'Bonjour $nom, je suis ${_user.fullName}, patient LaafiBa. Je souhaite échanger avec vous concernant ma consultation.',
+    );
+    final uri = Uri.parse('https://wa.me/$phone?text=$message');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted) return;
+    if (!opened) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Impossible d ouvrir WhatsApp.'),
+        backgroundColor: AppColors.error,
+      ));
+    }
+  }
+
+  String _normaliserTelephoneWhatsApp(String raw) {
+    var phone = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (phone.startsWith('+')) phone = phone.substring(1);
+    if (phone.startsWith('00')) phone = phone.substring(2);
+    if (phone.length == 8) phone = '226$phone';
+    return phone;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -163,14 +208,11 @@ class _PatientDashboardState extends State<PatientDashboard> {
         ),
         const SizedBox(height: 10),
         QuickActionCard(
-          title: 'Résultats médicaux',
-          subtitle: 'Analyses et imageries',
-          icon: Icons.science_outlined,
+          title: 'Contacter mon médecin',
+          subtitle: 'Ouvrir WhatsApp avec le dernier médecin consulté',
+          icon: Icons.chat_outlined,
           color: const Color(0xFF3949AB),
-          onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => ResultatsMedicauxScreen(user: _user))),
+          onTap: _contacterDernierMedecin,
         ),
         const SizedBox(height: 10),
         QuickActionCard(
@@ -296,10 +338,3 @@ class _PatientDashboardState extends State<PatientDashboard> {
     );
   }
 }
-
-
-
-
-
-
-
