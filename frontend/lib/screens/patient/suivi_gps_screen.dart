@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
@@ -17,7 +16,7 @@ class SuiviGpsScreen extends StatefulWidget {
 }
 
 class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
-  final MapController _mapController = MapController();
+  GoogleMapController? _mapController;
   Map<String, dynamic>? _position;
   Timer? _timer;
   io.Socket? _socket;
@@ -39,6 +38,7 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
     _timer?.cancel();
     _socket?.emit('arreter_suivi_commande', widget.commandeId);
     _socket?.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -68,14 +68,13 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
   }
 
   void _deplacerCarte() {
-    if (_position == null) return;
-    _mapController.move(
+    if (_position == null || _mapController == null) return;
+    _mapController!.animateCamera(CameraUpdate.newLatLng(
       LatLng(
         double.parse(_position!['latitude'].toString()),
         double.parse(_position!['longitude'].toString()),
       ),
-      15,
-    );
+    ));
   }
 
   Future<void> _charger() async {
@@ -113,6 +112,7 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
     final lng = _position != null
         ? double.tryParse(_position!['longitude'].toString()) ?? -4.2979
         : -4.2979;
+    final livreurPosition = LatLng(lat, lng);
 
     return Scaffold(
       appBar: AppBar(
@@ -149,35 +149,26 @@ class _SuiviGpsScreenState extends State<SuiviGpsScreen> {
                   ),
                 )
               : Stack(children: [
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: LatLng(lat, lng),
-                      initialZoom: 15,
+                  GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: livreurPosition,
+                      zoom: 15,
                     ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.laafiba.health',
-                      ),
-                      MarkerLayer(markers: [
-                        Marker(
-                          point: LatLng(lat, lng),
-                          width: 50, height: 50,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF4511E),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                                Icons.delivery_dining,
-                                color: Colors.white,
-                                size: 28),
-                          ),
+                    onMapCreated: (controller) => _mapController = controller,
+                    markers: {
+                      Marker(
+                        markerId: const MarkerId('livreur'),
+                        position: livreurPosition,
+                        icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueOrange),
+                        infoWindow: InfoWindow(
+                          title:
+                              '${_position!['livreur_prenom'] ?? ''} ${_position!['livreur_nom'] ?? ''}',
                         ),
-                      ]),
-                    ],
+                      ),
+                    },
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: true,
                   ),
                   // Info livreur
                   Positioned(

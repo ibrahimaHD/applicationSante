@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../constants/app_constants.dart';
 import '../../models/user_model.dart';
 import '../../services/routing_service.dart';
-
-
 
 class CartographieScreen extends StatefulWidget {
   final UserModel user;
@@ -22,91 +19,14 @@ class CartographieScreen extends StatefulWidget {
 class _CartographieScreenState extends State<CartographieScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final MapController _mapController = MapController();
-
-
-
-// Ajouter dans _CartographieScreenState :
-List<LatLng> _itineraire = [];
-bool _chargementItineraire = false;
-LatLng? _positionUtilisateur;
-
-Future<LatLng> _positionActuelle() async {
-  try {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return _positionUtilisateur ?? _bobo;
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-      return _positionUtilisateur ?? _bobo;
-    }
-
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.medium,
-    );
-    final current = LatLng(position.latitude, position.longitude);
-    setState(() => _positionUtilisateur = current);
-    return current;
-  } catch (_) {
-    return _positionUtilisateur ?? _bobo;
-  }
-}
-
-Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
-  if (destination['latitude'] == null) return;
-
-  setState(() => _chargementItineraire = true);
-
-  final depart = await _positionActuelle();
-  final userLat = depart.latitude;
-  final userLng = depart.longitude;
-
-  final destLat =
-      double.parse(destination['latitude'].toString());
-  final destLng =
-      double.parse(destination['longitude'].toString());
-
-  final points = await RoutingService.getItineraire(
-    startLat: userLat,
-    startLng: userLng,
-    endLat: destLat,
-    endLng: destLng,
-  );
-
-  final distance = RoutingService.calculerDistance(
-      userLat, userLng, destLat, destLng);
-  final dureeMinutes = RoutingService.estimerDureeMinutes(distance);
-
-  setState(() {
-    _itineraire = points != null
-        ? points.map((p) => LatLng(p[0], p[1])).toList()
-        : [
-            LatLng(userLat, userLng),
-            LatLng(destLat, destLng),
-          ];
-    _chargementItineraire = false;
-  });
-
-  _mapController.move(
-      LatLng(
-          (userLat + destLat) / 2,
-          (userLng + destLng) / 2),
-      13);
-
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          'Distance estimée : ${distance.toStringAsFixed(1)} km • environ $dureeMinutes min'),
-      backgroundColor: const Color(0xFF1E88E5),
-    ));
-  }
-}
+  GoogleMapController? _mapController;
 
   // Centre de Bobo-Dioulasso
   static const LatLng _bobo = LatLng(11.1771, -4.2979);
+
+  List<LatLng> _itineraire = [];
+  bool _chargementItineraire = false;
+  LatLng? _positionUtilisateur;
 
   List<dynamic> _formations = [];
   List<dynamic> _pharmacies = [];
@@ -130,12 +50,93 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
   @override
   void dispose() {
     _tabController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(AppConstants.tokenKey);
+  }
+
+  Future<LatLng> _positionActuelle() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return _positionUtilisateur ?? _bobo;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return _positionUtilisateur ?? _bobo;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+      final current = LatLng(position.latitude, position.longitude);
+      setState(() => _positionUtilisateur = current);
+      return current;
+    } catch (_) {
+      return _positionUtilisateur ?? _bobo;
+    }
+  }
+
+  Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
+    if (destination['latitude'] == null) return;
+
+    setState(() => _chargementItineraire = true);
+
+    final depart = await _positionActuelle();
+    final userLat = depart.latitude;
+    final userLng = depart.longitude;
+
+    final destLat = double.parse(destination['latitude'].toString());
+    final destLng = double.parse(destination['longitude'].toString());
+
+    final points = await RoutingService.getItineraire(
+      startLat: userLat,
+      startLng: userLng,
+      endLat: destLat,
+      endLng: destLng,
+    );
+
+    final distance =
+        RoutingService.calculerDistance(userLat, userLng, destLat, destLng);
+    final dureeMinutes = RoutingService.estimerDureeMinutes(distance);
+
+    setState(() {
+      _itineraire = points != null
+          ? points.map((p) => LatLng(p[0], p[1])).toList()
+          : [LatLng(userLat, userLng), LatLng(destLat, destLng)];
+      _chargementItineraire = false;
+    });
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(
+            userLat < destLat ? userLat : destLat,
+            userLng < destLng ? userLng : destLng,
+          ),
+          northeast: LatLng(
+            userLat > destLat ? userLat : destLat,
+            userLng > destLng ? userLng : destLng,
+          ),
+        ),
+        80,
+      ),
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Distance estimée : ${distance.toStringAsFixed(1)} km • environ $dureeMinutes min'),
+        backgroundColor: const Color(0xFF1E88E5),
+      ));
+    }
   }
 
   Future<void> _charger() async {
@@ -157,7 +158,9 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
         formationUrl += '?type=$_filtreType';
       }
       if (_filtreSpecialite != null) {
-        formationUrl += formationUrl.contains('?') ? '&specialite=$_filtreSpecialite' : '?specialite=$_filtreSpecialite';
+        formationUrl += formationUrl.contains('?')
+            ? '&specialite=$_filtreSpecialite'
+            : '?specialite=$_filtreSpecialite';
       }
       if (geoParams.isNotEmpty) {
         formationUrl += formationUrl.contains('?') ? '&$geoParams' : '?$geoParams';
@@ -172,7 +175,8 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
       final results = await Future.wait([
         http.get(Uri.parse(formationUrl), headers: headers),
         http.get(Uri.parse(pharmacieUrl), headers: headers),
-        http.get(Uri.parse('${AppConstants.baseUrl}/cartographie/specialites'), headers: headers),
+        http.get(Uri.parse('${AppConstants.baseUrl}/cartographie/specialites'),
+            headers: headers),
       ]);
 
       if (results[0].statusCode == 200) {
@@ -182,15 +186,18 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
         setState(() => _pharmacies = jsonDecode(results[1].body)['pharmacies'] ?? []);
       }
       if (results[2].statusCode == 200) {
-        setState(() => _specialites = List<String>.from(jsonDecode(results[2].body)['specialites'] ?? []));
+        setState(() => _specialites =
+            List<String>.from(jsonDecode(results[2].body)['specialites'] ?? []));
       }
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('cartographie_cache', jsonEncode({
-        'formations': _formations,
-        'pharmacies': _pharmacies,
-        'specialites': _specialites,
-      }));
+      await prefs.setString(
+          'cartographie_cache',
+          jsonEncode({
+            'formations': _formations,
+            'pharmacies': _pharmacies,
+            'specialites': _specialites,
+          }));
       setState(() => _modeHorsLigne = false);
     } catch (e) {
       final prefs = await SharedPreferences.getInstance();
@@ -212,91 +219,124 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
 
   Color _typeColor(String type) {
     switch (type) {
-      case 'CHU': return const Color(0xFFC62828);
-      case 'CHR': return const Color(0xFFE53935);
-      case 'CMA': return const Color(0xFF1E88E5);
-      case 'CSPS': return const Color(0xFF00897B);
-      case 'clinique': return const Color(0xFF8E24AA);
-      case 'cabinet': return const Color(0xFFF4511E);
-      default: return AppColors.primary;
+      case 'CHU':
+        return const Color(0xFFC62828);
+      case 'CHR':
+        return const Color(0xFFE53935);
+      case 'CMA':
+        return const Color(0xFF1E88E5);
+      case 'CSPS':
+        return const Color(0xFF00897B);
+      case 'clinique':
+        return const Color(0xFF8E24AA);
+      case 'cabinet':
+        return const Color(0xFFF4511E);
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  // Google Maps a besoin d'une teinte (BitmapDescriptor.hue*) plutôt que d'une
+  // Color arbitraire pour ses marqueurs par défaut.
+  double _typeHue(String type) {
+    switch (type) {
+      case 'CHU':
+      case 'CHR':
+        return BitmapDescriptor.hueRed;
+      case 'CMA':
+        return BitmapDescriptor.hueAzure;
+      case 'CSPS':
+        return BitmapDescriptor.hueGreen;
+      case 'clinique':
+        return BitmapDescriptor.hueViolet;
+      case 'cabinet':
+        return BitmapDescriptor.hueOrange;
+      default:
+        return BitmapDescriptor.hueRose;
     }
   }
 
   IconData _typeIcon(String type) {
     switch (type) {
       case 'CHU':
-      case 'CHR': return Icons.local_hospital;
-      case 'CMA': return Icons.medical_services;
-      case 'CSPS': return Icons.health_and_safety;
-      case 'clinique': return Icons.business;
-      case 'cabinet': return Icons.person;
-      default: return Icons.place;
+      case 'CHR':
+        return Icons.local_hospital;
+      case 'CMA':
+        return Icons.medical_services;
+      case 'CSPS':
+        return Icons.health_and_safety;
+      case 'clinique':
+        return Icons.business;
+      case 'cabinet':
+        return Icons.person;
+      default:
+        return Icons.place;
     }
   }
 
-  List<Marker> _buildMarkers() {
-    final markers = <Marker>[];
+  Set<Marker> _buildMarkers() {
+    final markers = <Marker>{};
 
     if (_positionUtilisateur != null) {
       markers.add(Marker(
-        point: _positionUtilisateur!,
-        width: 42,
-        height: 42,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 8)],
-          ),
-          child: const Icon(Icons.my_location, color: Colors.white, size: 19),
-        ),
+        markerId: const MarkerId('moi'),
+        position: _positionUtilisateur!,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: const InfoWindow(title: 'Ma position'),
       ));
     }
 
     for (final f in _formations) {
       if (f['latitude'] == null || f['longitude'] == null) continue;
-      final color = _typeColor(f['type'] ?? '');
+      final type = f['type'] ?? '';
       markers.add(Marker(
-        point: LatLng(double.parse(f['latitude'].toString()), double.parse(f['longitude'].toString())),
-        width: 40,
-        height: 40,
-        child: GestureDetector(
-          onTap: () => _afficherDetails(f, estFormation: true),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 3))],
-            ),
-            child: Icon(_typeIcon(f['type'] ?? ''), color: Colors.white, size: 20),
-          ),
+        markerId: MarkerId('formation_${f['id']}'),
+        position: LatLng(
+          double.parse(f['latitude'].toString()),
+          double.parse(f['longitude'].toString()),
         ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(_typeHue(type)),
+        infoWindow: InfoWindow(
+          title: f['nom'] ?? '',
+          snippet: type,
+        ),
+        onTap: () => _afficherDetails(f, estFormation: true),
       ));
     }
 
     for (final p in _pharmacies) {
       if (p['latitude'] == null || p['longitude'] == null) continue;
-      final color = p['est_garde'] == true ? const Color(0xFF00ACC1) : const Color(0xFF26A69A);
+      final garde = p['est_garde'] == true;
       markers.add(Marker(
-        point: LatLng(double.parse(p['latitude'].toString()), double.parse(p['longitude'].toString())),
-        width: 40,
-        height: 40,
-        child: GestureDetector(
-          onTap: () => _afficherDetails(p, estFormation: false),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: color.withOpacity(0.4), blurRadius: 8)],
-            ),
-            child: const Icon(Icons.medication, color: Colors.white, size: 20),
-          ),
+        markerId: MarkerId('pharmacie_${p['id']}'),
+        position: LatLng(
+          double.parse(p['latitude'].toString()),
+          double.parse(p['longitude'].toString()),
         ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+          garde ? BitmapDescriptor.hueCyan : BitmapDescriptor.hueGreen,
+        ),
+        infoWindow: InfoWindow(
+          title: p['nom'] ?? '',
+          snippet: garde ? 'Pharmacie de garde' : 'Pharmacie',
+        ),
+        onTap: () => _afficherDetails(p, estFormation: false),
       ));
     }
 
     return markers;
+  }
+
+  Set<Polyline> _buildPolylines() {
+    if (_itineraire.isEmpty) return {};
+    return {
+      Polyline(
+        polylineId: const PolylineId('itineraire'),
+        points: _itineraire,
+        width: 4,
+        color: const Color(0xFF1E88E5),
+      ),
+    };
   }
 
   void _afficherDetails(Map<String, dynamic> item, {required bool estFormation}) {
@@ -315,7 +355,6 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
               decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 16),
 
-          // Header
           Row(children: [
             Container(
               width: 50, height: 50,
@@ -353,7 +392,6 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
 
           const Divider(height: 24),
 
-          // Infos
           if (item['adresse'] != null) _infoRow(Icons.location_on_outlined, item['adresse']),
           if (item['telephone'] != null) _infoRow(Icons.phone_outlined, item['telephone']),
           if (item['horaires'] != null) _infoRow(Icons.access_time_outlined, item['horaires']),
@@ -362,7 +400,6 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
           if (estFormation && item['urgences'] == true)
             _infoRow(Icons.emergency_outlined, 'Urgences disponibles 24h/24', color: AppColors.error),
 
-          // Spécialités
           if (estFormation && item['specialites'] != null && (item['specialites'] as List).isNotEmpty) ...[
             const SizedBox(height: 12),
             const Align(alignment: Alignment.centerLeft,
@@ -390,10 +427,10 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
                 onPressed: () {
                   Navigator.pop(context);
                   if (item['latitude'] != null) {
-                    _mapController.move(
+                    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
                       LatLng(double.parse(item['latitude'].toString()), double.parse(item['longitude'].toString())),
                       16,
-                    );
+                    ));
                     _tabController.animateTo(0);
                   }
                 },
@@ -483,7 +520,6 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(children: [
-              // Mode hors ligne banner
               if (_modeHorsLigne)
                 Container(
                   width: double.infinity,
@@ -512,62 +548,48 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
                             ],
                           )
                         : Stack(children: [
-                      FlutterMap(
-                        mapController: _mapController,
-                        options: const MapOptions(
-                          initialCenter: _bobo,
-                          initialZoom: 13,
-                          minZoom: 10,
-                          maxZoom: 18,
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.laafiba.health',
-                          ),
-                          if (_itineraire.isNotEmpty)
-                            PolylineLayer(polylines: [
-                              Polyline(
-                                points: _itineraire,
-                                strokeWidth: 4,
-                                color: const Color(0xFF1E88E5),
+                            GoogleMap(
+                              initialCameraPosition: const CameraPosition(
+                                target: _bobo,
+                                zoom: 13,
                               ),
-                            ]),
-                          MarkerLayer(markers: _buildMarkers()),
-                        ],
-                      ),
-                      // Légende
-                      Positioned(
-                        bottom: 16,
-                        left: 16,
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
-                          ),
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Text('Légende', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 6),
-                            _legendeItem(const Color(0xFFC62828), 'CHU/CHR'),
-                            _legendeItem(const Color(0xFF1E88E5), 'CMA'),
-                            _legendeItem(const Color(0xFF00897B), 'CSPS'),
-                            _legendeItem(const Color(0xFF8E24AA), 'Clinique'),
-                            _legendeItem(const Color(0xFF00ACC1), 'Pharmacie'),
+                              onMapCreated: (controller) => _mapController = controller,
+                              markers: _buildMarkers(),
+                              polylines: _buildPolylines(),
+                              myLocationButtonEnabled: false,
+                              zoomControlsEnabled: true,
+                              minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+                            ),
+                            // Légende
+                            Positioned(
+                              bottom: 16,
+                              left: 16,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+                                ),
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  const Text('Légende', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 6),
+                                  _legendeItem(const Color(0xFFC62828), 'CHU/CHR'),
+                                  _legendeItem(const Color(0xFF1E88E5), 'CMA'),
+                                  _legendeItem(const Color(0xFF00897B), 'CSPS'),
+                                  _legendeItem(const Color(0xFF8E24AA), 'Clinique'),
+                                  _legendeItem(const Color(0xFF00ACC1), 'Pharmacie'),
+                                ]),
+                              ),
+                            ),
                           ]),
-                        ),
-                      ),
-                    ]),
 
                     // ── Onglet Formations ─────────────────────────────
                     Column(children: [
-                      // Filtres
                       Container(
                         padding: const EdgeInsets.all(12),
                         color: Colors.white,
                         child: Column(children: [
-                          // Filtre type
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
@@ -596,7 +618,6 @@ Future<void> _afficherItineraire(Map<String, dynamic> destination) async {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // Filtre spécialité
                           if (_specialites.isNotEmpty)
                             DropdownButtonFormField<String>(
                               value: _filtreSpecialite,
